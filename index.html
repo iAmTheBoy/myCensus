@@ -4,116 +4,301 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Our Lady of Fatima Census</title>
-    <!-- Load Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Custom styles for better aesthetics */
+        /* --- General Reset & Typography --- */
         body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f0f4f8; /* Soft background */
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f7f9;
         }
+
         .form-container {
             max-width: 900px;
-            margin: 40px auto;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
+
+        /* --- Header Styling --- */
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            color: #1f2937;
+            margin-bottom: 5px;
+        }
+
+        header p {
+            color: #6b7280;
+            font-size: 1rem;
+        }
+
+        /* --- Section Styling --- */
+        .section-block {
+            padding: 20px;
+            margin-bottom: 25px;
+            border-left: 5px solid;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+            background-color: #f9fafb;
+        }
+
+        .section-block h2 {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+        
+        /* Specific Section Colors */
+        .household { border-left-color: #4f46e5; }
+        .household h2 { color: #3730a3; }
+
+        .adult-members { border-left-color: #3b82f6; }
+        .adult-members h2 { color: #2563eb; }
+        .member-block { border: 1px solid #93c5fd; background-color: #ffffff; padding: 20px; border-radius: 8px; margin-bottom: 20px; position: relative; }
+        .member-block h3 { color: #1d4ed8; font-size: 1.1rem; margin-bottom: 15px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; }
+
+        .children-section { border-left-color: #10b981; }
+        .children-section h2 { color: #059669; }
+        .child-block { border: 1px solid #6ee7b7; background-color: #ffffff; padding: 20px; border-radius: 8px; margin-bottom: 20px; position: relative; }
+        .child-block h3 { color: #047857; font-size: 1.1rem; margin-bottom: 15px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; }
+
+        /* --- Form Elements --- */
+        .grid {
+            display: grid;
+            gap: 15px;
+        }
+
+        .grid-3 { grid-template-columns: repeat(1, 1fr); }
+        .grid-4 { grid-template-columns: repeat(1, 1fr); }
+        .grid-2 { grid-template-columns: repeat(1, 1fr); }
+        
+        @media (min-width: 600px) {
+            .grid-3 { grid-template-columns: repeat(3, 1fr); }
+            .grid-4 { grid-template-columns: repeat(4, 1fr); }
+            .grid-2 { grid-template-columns: repeat(2, 1fr); }
+            .col-span-2 { grid-column: span 2 / span 2; }
+        }
+
+        label {
+            display: block;
+            font-size: 0.9rem;
+            color: #374151;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        input[type="text"], input[type="date"], input[type="tel"], select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            box-sizing: border-box;
+            margin-top: 4px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        
+        input:focus, select:focus {
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.3);
+            outline: none;
+        }
+        
+        input[readonly] {
+            background-color: #e5e7eb;
+            cursor: default;
+        }
+
+        /* --- Conditional Fields --- */
         .conditional-fields {
-            transition: all 0.3s ease-in-out;
+            transition: max-height 0.4s ease-in-out, opacity 0.4s ease-in-out, padding 0.4s ease-in-out;
             max-height: 0;
             overflow: hidden;
             opacity: 0;
-            padding: 0 1rem;
+            padding: 0 10px;
+            margin-top: 5px;
         }
         .conditional-fields.active {
-            max-height: 500px; /* Large enough to cover content */
+            max-height: 500px; 
             opacity: 1;
-            padding: 1rem;
-            margin-top: 1rem;
+            padding: 15px;
+            margin-top: 15px;
+            background-color: #f7f9fc;
+            border: 1px solid #e0e7ff;
+            border-radius: 6px;
         }
-        /* Custom Field Styles */
-        input[type="text"], input[type="date"], input[type="tel"], select {
-            border: 1px solid #d1d5db;
-            padding: 0.65rem 0.75rem;
-            border-radius: 0.5rem;
-            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-            transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+        
+        .sub-section-card {
+            padding: 15px;
+            border-left: 4px solid #60a5fa;
+            border-radius: 6px;
+            background-color: #eff6ff;
+            margin-top: 15px;
         }
-        input:focus, select:focus {
-            border-color: #2563eb;
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
-            outline: none;
+        .sub-section-card h4 {
+            color: #1e40af;
+            font-weight: bold;
+            margin-bottom: 10px;
         }
+        
+        /* Child Sacraments specific color */
+        .children-section .sub-section-card {
+            border-left-color: #34d399;
+            background-color: #ecfdf5;
+        }
+        .children-section .sub-section-card h4 {
+            color: #065f46;
+        }
+
+        /* --- Buttons --- */
+        .add-button {
+            width: 100%;
+            text-align: center;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s, box-shadow 0.2s;
+            border: none;
+            margin-top: 15px;
+        }
+
+        #add-member-button {
+            background-color: #3b82f6;
+            color: white;
+        }
+        #add-member-button:hover { background-color: #2563eb; }
+
+        #add-child-button {
+            background-color: #10b981;
+            color: white;
+        }
+        #add-child-button:hover { background-color: #059669; }
+
+        .remove-button {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background-color: #fecaca;
+            color: #b91c1c;
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .remove-button:hover { background-color: #fca5a5; }
+
+        #submit-button {
+            width: 100%;
+            background-color: #4f46e5;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 1.25rem;
+            font-weight: bold;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.2s, box-shadow 0.2s;
+        }
+        #submit-button:hover { background-color: #4338ca; }
+        #submit-button:disabled { background-color: #9ca3af; cursor: not-allowed; }
+
+        /* --- Feedback Message --- */
+        #form-feedback {
+            padding: 10px;
+            text-align: center;
+            font-weight: bold;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            display: none;
+        }
+        #form-feedback.success { background-color: #d1fae5; color: #065f46; border: 1px solid #34d399; }
+        #form-feedback.error { background-color: #fee2e2; color: #b91c1c; border: 1px solid #f87171; }
+        #form-feedback.pending { background-color: #e0f2fe; color: #1e40af; border: 1px solid #60a5fa; }
     </style>
 </head>
 <body>
 
-    <div class="form-container bg-white shadow-2xl rounded-2xl p-6 md:p-12 border border-gray-200">
+    <div class="form-container">
         
-        <header class="text-center mb-12">
-            <h1 class="text-4xl md:text-5xl font-extrabold text-[#1f2937] mb-2 font-serif tracking-tight">Our Lady of Fatima Census</h1>
-            <p class="text-gray-500 text-lg">Detailed Household and Sacramental Registration</p>
+        <header>
+            <h1>Our Lady of Fatima Census</h1>
+            <p>Detailed Household and Sacramental Registration</p>
         </header>
         
         <!-- ================================== -->
         <!-- THE MAIN FORM -->
-        <!-- IMPORTANT: The Apps Script URL is now set -->
+        <!-- The URL below must be replaced with your deployed Apps Script URL -->
         <!-- ================================== -->
-        <form id="censusForm" action="https://script.google.com/macros/s/AKfycbzBEaB_jnjRWFrLMwpMxrFnJMUjfuG39r4xWlwCI-NJ9oPzMB1jnoy4Jb5SL8Y70nMGSQ/exec" method="POST">
+        <form id="censusForm" action="https://script.google.com/macros/s/AKfycbyRL819h9NlvcAdfNdvsaxjWF9ykxDBtX2Zyo9jgWSPhcUHo8tEq-cm1q-LOKsPK_XJaQ/exec" method="POST">
             
             <!-- HOUSEHOLD INFORMATION SECTION -->
-            <div class="p-8 mb-10 rounded-xl bg-gray-50 border-l-4 border-indigo-700 shadow-lg">
-                <h2 class="text-2xl font-bold text-indigo-800 mb-6 flex items-center">
-                    <svg class="w-6 h-6 mr-3 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+            <div class="section-block household">
+                <h2>
+                    <!-- SVG Icon for House -->
+                    <svg style="width: 24px; height: 24px; margin-right: 10px; color: #4f46e5;" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
                     Household Information
                 </h2>
-                <p class="text-sm text-gray-600 mb-6">Enter the main household details below.</p>
+                <p style="font-size: 0.9rem; color: #6b7280; margin-bottom: 20px;">Enter the main household details below.</p>
                 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="grid grid-3">
                     <div>
-                        <label for="BlockName" class="block text-sm font-medium text-gray-700">Block Name</label>
-                        <input type="text" name="BlockName" id="BlockName" required class="mt-1 block w-full rounded-md shadow-sm">
+                        <label for="BlockName">Block Name</label>
+                        <input type="text" name="BlockName" id="BlockName" required>
                     </div>
-                    <div class="md:col-span-2">
-                        <label for="ResidentialAddress" class="block text-sm font-medium text-gray-700">Residential Address</label>
-                        <input type="text" name="ResidentialAddress" id="ResidentialAddress" required class="mt-1 block w-full rounded-md shadow-sm">
+                    <div class="col-span-2">
+                        <label for="ResidentialAddress">Residential Address</label>
+                        <input type="text" name="ResidentialAddress" id="ResidentialAddress" required>
                     </div>
                     <div>
-                        <label for="ContactNo" class="block text-sm font-medium text-gray-700">Contact Phone Number</label>
-                        <input type="tel" name="ContactNo" id="ContactNo" required class="mt-1 block w-full rounded-md shadow-sm">
+                        <label for="ContactNo">Contact Phone Number</label>
+                        <input type="tel" name="ContactNo" id="ContactNo" required>
                     </div>
                 </div>
             </div>
 
             <!-- ADULT MEMBERS INFORMATION SECTION -->
-            <div class="p-8 mb-10 rounded-xl bg-gray-50 border-l-4 border-blue-700 shadow-lg">
-                <h2 class="text-2xl font-bold text-blue-800 mb-6 flex items-center">
-                    <svg class="w-6 h-6 mr-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20h-2m2 0h-2m0 0h-2m-3.112-2.357A3 3 0 0113 16h-3a3 3 0 01-2.888-2.357M6 12V7a4 4 0 014-4h4a4 4 0 014 4v5m-6 0h.01M16 19h-3a1 1 0 01-1-1v-4h4v4a1 1 0 01-1 1z"></path></svg>
+            <div class="section-block adult-members">
+                <h2>
+                    <!-- SVG Icon for Users -->
+                    <svg style="width: 24px; height: 24px; margin-right: 10px; color: #3b82f6;" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20h-2m2 0h-2m0 0h-2m-3.112-2.357A3 3 0 0113 16h-3a3 3 0 01-2.888-2.357M6 12V7a4 4 0 014-4h4a4 4 0 014 4v5m-6 0h.01M16 19h-3a1 1 0 01-1-1v-4h4v4a1 1 0 01-1 1z"></path></svg>
                     Adult Members
                 </h2>
                 <div id="adult-members-container" class="space-y-8">
                     <!-- Dynamic Member Blocks Go Here -->
                 </div>
-                <button type="button" id="add-member-button" onclick="addMember()" class="mt-8 w-full text-center bg-blue-700 text-white py-3 rounded-lg font-semibold hover:bg-blue-800 transition duration-150 shadow-md">
+                <button type="button" id="add-member-button" onclick="addMember()" class="add-button">
                     + Add Another Adult Member
                 </button>
             </div>
 
             <!-- CHILDREN INFORMATION SECTION -->
-            <div class="p-8 mb-10 rounded-xl bg-gray-50 border-l-4 border-emerald-600 shadow-lg">
-                <h2 class="text-2xl font-bold text-emerald-800 mb-6 flex items-center">
-                    <svg class="w-6 h-6 mr-3 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+            <div class="section-block children-section">
+                <h2>
+                    <!-- SVG Icon for Child -->
+                    <svg style="width: 24px; height: 24px; margin-right: 10px; color: #10b981;" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                     Children
                 </h2>
                 <div id="children-container" class="space-y-8">
                     <!-- Dynamic Child Blocks Go Here -->
                 </div>
-                <button type="button" id="add-child-button" onclick="addChild()" class="mt-8 w-full text-center bg-emerald-600 text-white py-3 rounded-lg font-semibold hover:bg-emerald-700 transition duration-150 shadow-md">
+                <button type="button" id="add-child-button" onclick="addChild()" class="add-button">
                     + Add Another Child
                 </button>
             </div>
 
             <!-- SUBMIT BUTTON -->
-            <div id="form-feedback" class="mb-4 text-center hidden text-lg font-medium"></div>
-            <button type="submit" id="submit-button" class="w-full bg-indigo-700 text-white py-4 rounded-lg text-xl font-bold hover:bg-indigo-800 transition duration-200 shadow-xl tracking-wide">
+            <div id="form-feedback" class="feedback-message"></div>
+            <button type="submit" id="submit-button">
                 Submit Household Census
             </button>
             
@@ -124,15 +309,18 @@
         // --- Global Counters ---
         let memberIndex = 0; 
         let childIndex = 0;
+        
+        // --- Helper Functions ---
 
-        // --- Helper Function for Conditional Field Toggling (Baptism, Communion, Confirmation, Dikabelo) ---
+        /**
+         * Toggles the visibility of conditional fields based on a select input's value.
+         * @param {HTMLSelectElement} selectElement The select element triggering the change.
+         */
         function toggleConditionalFields(selectElement) {
             const block = selectElement.closest('.member-block') || selectElement.closest('.child-block');
-            // Extracts field name from "members[i][FieldName]" or "children[i][FieldName]"
             const fieldNameMatch = selectElement.name.match(/\[(\w+)\]$/);
             const fieldName = fieldNameMatch ? fieldNameMatch[1] : null; 
 
-            // Find the specific container for the conditional fields
             const conditionalContainer = block.querySelector(`[data-conditional-for="${fieldName}"]`);
 
             if (conditionalContainer) {
@@ -144,124 +332,159 @@
             }
         }
 
-        // --- Helper Function for Marital Status Fields (Conditional on Married/Widower) ---
+        /**
+         * Toggles fields for Marriage/Widow(er) status.
+         * @param {HTMLSelectElement} selectElement The marital status select element.
+         */
         function toggleMaritalFields(selectElement) {
             const block = selectElement.closest('.member-block');
             const conditionalContainer = block.querySelector('[data-conditional-for="MaritalStatus"]');
             
-            if (selectElement.value === 'Married' || selectElement.value === 'Widower') {
-                conditionalContainer.classList.add('active');
-            } else {
-                conditionalContainer.classList.remove('active');
+            if (conditionalContainer) {
+                if (selectElement.value === 'Married' || selectElement.value === 'Widower') {
+                    conditionalContainer.classList.add('active');
+                } else {
+                    conditionalContainer.classList.remove('active');
+                }
             }
+        }
+        
+        /**
+         * Calculates age based on Date of Birth.
+         * @param {HTMLInputElement} dobInput The Date of Birth input element.
+         * @param {string} ageFieldName The name attribute of the corresponding age input.
+         */
+        function calculateAge(dobInput, ageFieldName) {
+            const dob = new Date(dobInput.value);
+            const now = new Date();
+            let age = now.getFullYear() - dob.getFullYear();
+            const monthDiff = now.getMonth() - dob.getMonth();
+            
+            if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < dob.getDate())) {
+                age--;
+            }
+
+            const form = dobInput.closest('form');
+            const ageInput = form.querySelector(`input[name="${ageFieldName}"]`);
+            if (ageInput) {
+                ageInput.value = age >= 0 ? age : '';
+            }
+        }
+
+        /**
+         * Removes a dynamic block (member or child).
+         * @param {string} id The ID of the block to remove.
+         */
+        function removeBlock(id) {
+            document.getElementById(id).remove();
         }
 
         // --- Template Functions ---
 
         function createMemberBlock(index) {
             const block = document.createElement('div');
-            block.className = 'member-block p-6 border border-blue-300 rounded-lg bg-white shadow-lg relative';
+            block.className = 'member-block';
             block.id = `member-${index}`;
             block.innerHTML = `
-                <h3 class="text-xl font-semibold text-blue-700 mb-6 border-b pb-2">Adult Member ${index + 1}</h3>
+                <h3>Adult Member ${index + 1}</h3>
                 
-                <button type="button" onclick="removeBlock('member-${index}')" class="absolute top-6 right-6 text-red-500 hover:text-red-700 text-sm font-medium ${index === 0 ? 'hidden' : ''} bg-gray-100 p-2 rounded-lg shadow-sm">Remove</button>
+                <button type="button" onclick="removeBlock('member-${index}')" class="remove-button" style="${index === 0 ? 'display: none;' : ''}">Remove</button>
                 
                 <!-- Basic Info -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <label class="block">First Name: <input type="text" name="members[${index}][FirstName]" ${index === 0 ? 'required' : ''} class="mt-1 block w-full"></label>
-                    <label class="block">Last Name: <input type="text" name="members[${index}][LastName]" ${index === 0 ? 'required' : ''} class="mt-1 block w-full"></label>
-                    <label class="block">Date of Birth: <input type="date" name="members[${index}][DOB]" class="mt-1 block w-full"></label>
+                <div class="grid grid-3" style="margin-bottom: 20px;">
+                    <label>First Name: <input type="text" name="members[${index}][FirstName]" ${index === 0 ? 'required' : ''}></label>
+                    <label>Last Name: <input type="text" name="members[${index}][LastName]" ${index === 0 ? 'required' : ''}></label>
+                    <label>Date of Birth: <input type="date" name="members[${index}][DOB]"></label>
                 </div>
                 
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                    <label class="block">Catholic?: 
-                        <select name="members[${index}][Catholic]" class="mt-1 block w-full">
+                <div class="grid grid-4" style="margin-bottom: 20px;">
+                    <label>Catholic?: 
+                        <select name="members[${index}][Catholic]">
                             <option value="Yes">Yes</option>
                             <option value="No">No</option>
                         </select>
                     </label>
-                    <label class="block">Occupation: <input type="text" name="members[${index}][Occupation]" class="mt-1 block w-full"></label>
-                    <label class="block">Church Activities: <input type="text" name="members[${index}][ChurchActivities]" class="mt-1 block w-full"></label>
-                    <label class="block">Solidarity/Ministry: <input type="text" name="members[${index}][SolidarityMinistry]" class="mt-1 block w-full"></label>
+                    <label>Occupation: <input type="text" name="members[${index}][Occupation]"></label>
+                    <label>Church Activities: <input type="text" name="members[${index}][ChurchActivities]"></label>
+                    <label>Solidarity/Ministry: <input type="text" name="members[${index}][SolidarityMinistry]"></label>
                 </div>
                 
-                <label class="block mb-8">Leadership Role: <input type="text" name="members[${index}][Leadership]" class="mt-1 block w-full"></label>
+                <label style="margin-bottom: 20px;">Leadership Role: <input type="text" name="members[${index}][Leadership]"></label>
 
-                <div class="border-t pt-6 space-y-6">
+                <div style="border-top: 1px solid #e5e7eb; padding-top: 20px; margin-top: 20px; display: grid; gap: 15px;">
                     
                     <!-- BAPTISM SUB-SECTION -->
-                    <div class="p-4 rounded-lg bg-blue-50 border-l-4 border-blue-400">
-                        <h4 class="text-blue-700 font-bold mb-3">Baptism Sacrament</h4>
-                        <label class="block mb-4">Baptised? (Yes/No): 
-                            <select name="members[${index}][Baptised]" onchange="toggleConditionalFields(this)" class="mt-1 block w-full">
+                    <div class="sub-section-card">
+                        <h4>Baptism Sacrament</h4>
+                        <label style="margin-bottom: 10px;">Baptised? (Yes/No): 
+                            <select name="members[${index}][Baptised]" onchange="toggleConditionalFields(this)">
                                 <option value="No">No</option>
                                 <option value="Yes">Yes</option>
                             </select>
                         </label>
-                        <div class="conditional-fields bg-white p-4 rounded-lg border border-blue-200" data-conditional-for="Baptised">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <label class="block">Date of Baptism: <input type="date" name="members[${index}][BaptismDate]" class="mt-1 block w-full"></label>
-                                <label class="block">Registration Number: <input type="text" name="members[${index}][RegistrationNumber]" class="mt-1 block w-full"></label>
-                                <label class="block">Church of Baptism: <input type="text" name="members[${index}][ChurchOfBaptism]" class="mt-1 block w-full"></label>
-                                <label class="block">Location of Church: <input type="text" name="members[${index}][LocationOfChurch]" class="mt-1 block w-full"></label>
+                        <div class="conditional-fields" data-conditional-for="Baptised">
+                            <div class="grid grid-2">
+                                <label>Date of Baptism: <input type="date" name="members[${index}][BaptismDate]"></label>
+                                <label>Registration Number: <input type="text" name="members[${index}][RegistrationNumber]"></label>
+                                <label>Church of Baptism: <input type="text" name="members[${index}][ChurchOfBaptism]"></label>
+                                <label>Location of Church: <input type="text" name="members[${index}][LocationOfChurch]"></label>
                             </div>
                         </div>
                     </div>
 
                     <!-- 1ST COMMUNION SUB-SECTION -->
-                    <div class="p-4 rounded-lg bg-blue-50 border-l-4 border-blue-400">
-                        <h4 class="text-blue-700 font-bold mb-3">First Communion Sacrament</h4>
-                        <label class="block mb-4">1st Communion? (Yes/No): 
-                            <select name="members[${index}][FirstCommunion]" onchange="toggleConditionalFields(this)" class="mt-1 block w-full">
+                    <div class="sub-section-card">
+                        <h4>First Communion Sacrament</h4>
+                        <label style="margin-bottom: 10px;">1st Communion? (Yes/No): 
+                            <select name="members[${index}][FirstCommunion]" onchange="toggleConditionalFields(this)">
                                 <option value="No">No</option>
                                 <option value="Yes">Yes</option>
                             </select>
                         </label>
-                        <div class="conditional-fields bg-white p-4 rounded-lg border border-blue-200" data-conditional-for="FirstCommunion">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <label class="block">Date 1st Communion: <input type="date" name="members[${index}][FirstCommunionDate]" class="mt-1 block w-full"></label>
-                                <label class="block">Church of 1st Communion: <input type="text" name="members[${index}][ChurchOfFirstCommunion]" class="mt-1 block w-full"></label>
+                        <div class="conditional-fields" data-conditional-for="FirstCommunion">
+                            <div class="grid grid-2">
+                                <label>Date 1st Communion: <input type="date" name="members[${index}][FirstCommunionDate]"></label>
+                                <label>Church of 1st Communion: <input type="text" name="members[${index}][ChurchOfFirstCommunion]"></label>
                             </div>
                         </div>
                     </div>
 
                     <!-- CONFIRMATION SUB-SECTION -->
-                    <div class="p-4 rounded-lg bg-blue-50 border-l-4 border-blue-400">
-                        <h4 class="text-blue-700 font-bold mb-3">Confirmation Sacrament</h4>
-                        <label class="block mb-4">Confirmed? (Yes/No): 
-                            <select name="members[${index}][Confirmation]" onchange="toggleConditionalFields(this)" class="mt-1 block w-full">
+                    <div class="sub-section-card">
+                        <h4>Confirmation Sacrament</h4>
+                        <label style="margin-bottom: 10px;">Confirmed? (Yes/No): 
+                            <select name="members[${index}][Confirmation]" onchange="toggleConditionalFields(this)">
                                 <option value="No">No</option>
                                 <option value="Yes">Yes</option>
                             </select>
                         </label>
-                        <div class="conditional-fields bg-white p-4 rounded-lg border border-blue-200" data-conditional-for="Confirmation">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <label class="block">Date of Confirmation: <input type="date" name="members[${index}][ConfirmationDate]" class="mt-1 block w-full"></label>
-                                <label class="block">Church of Confirmation: <input type="text" name="members[${index}][ChurchOfConfirmation]" class="mt-1 block w-full"></label>
+                        <div class="conditional-fields" data-conditional-for="Confirmation">
+                            <div class="grid grid-2">
+                                <label>Date of Confirmation: <input type="date" name="members[${index}][ConfirmationDate]"></label>
+                                <label>Church of Confirmation: <input type="text" name="members[${index}][ChurchOfConfirmation]"></label>
                             </div>
                         </div>
                     </div>
 
                     <!-- MARITAL STATUS SUB-SECTION -->
-                    <div class="p-4 rounded-lg bg-blue-50 border-l-4 border-blue-400">
-                        <h4 class="text-blue-700 font-bold mb-3">Marital Status & Matrimony Details</h4>
-                        <label class="block mb-4">Marital Status: 
-                            <select name="members[${index}][MaritalStatus]" onchange="toggleMaritalFields(this)" class="mt-1 block w-full">
+                    <div class="sub-section-card">
+                        <h4>Marital Status & Matrimony Details</h4>
+                        <label style="margin-bottom: 10px;">Marital Status: 
+                            <select name="members[${index}][MaritalStatus]" onchange="toggleMaritalFields(this)">
                                 <option value="Single">Single</option>
                                 <option value="Married">Married</option>
                                 <option value="Widower">Widow(er)</option>
                             </select>
                         </label>
-                        <div class="conditional-fields bg-white p-4 rounded-lg border border-blue-200" data-conditional-for="MaritalStatus">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <label class="block">Civil Court Marriage Date (Optional): <input type="date" name="members[${index}][CivilCourtMarriageDate]" class="mt-1 block w-full"></label>
-                                <label class="block">Church Marriage Date (Optional): <input type="date" name="members[${index}][ChurchMarriageDate]" class="mt-1 block w-full"></label>
-                                <label class="block md:col-span-2">Church Marriage Place (Optional): <input type="text" name="members[${index}][ChurchMarriagePlace]" class="mt-1 block w-full"></label>
+                        <div class="conditional-fields" data-conditional-for="MaritalStatus">
+                            <div class="grid grid-2">
+                                <label>Civil Court Marriage Date (Optional): <input type="date" name="members[${index}][CivilCourtMarriageDate]"></label>
+                                <label>Church Marriage Date (Optional): <input type="date" name="members[${index}][ChurchMarriageDate]"></label>
+                                <label style="grid-column: span 2;">Church Marriage Place (Optional): <input type="text" name="members[${index}][ChurchMarriagePlace]"></label>
                             </div>
                         </div>
-                        <label class="block mt-4">Divorced? (Yes/No option): 
-                            <select name="members[${index}][Divorced]" class="mt-1 block w-full">
+                        <label style="margin-top: 15px;">Divorced? (Yes/No option): 
+                            <select name="members[${index}][Divorced]">
                                 <option value="No">No</option>
                                 <option value="Yes">Yes</option>
                             </select>
@@ -269,16 +492,16 @@
                     </div>
 
                     <!-- DIKABELO SUB-SECTION -->
-                    <div class="p-4 rounded-lg bg-blue-50 border-l-4 border-blue-400">
-                        <h4 class="text-blue-700 font-bold mb-3">Dikabelo</h4>
-                        <label class="block mb-4">Dikabelo? (Yes/No option): 
-                            <select name="members[${index}][Dikabelo]" onchange="toggleConditionalFields(this)" class="mt-1 block w-full">
+                    <div class="sub-section-card">
+                        <h4>Dikabelo</h4>
+                        <label style="margin-bottom: 10px;">Dikabelo? (Yes/No option): 
+                            <select name="members[${index}][Dikabelo]" onchange="toggleConditionalFields(this)">
                                 <option value="No">No</option>
                                 <option value="Yes">Yes</option>
                             </select>
                         </label>
-                        <div class="conditional-fields bg-white p-4 rounded-lg border border-blue-200" data-conditional-for="Dikabelo">
-                            <label class="block">Date of Last Dikabelo: <input type="date" name="members[${index}][DateOfLastDikabelo]" class="mt-1 block w-full"></label>
+                        <div class="conditional-fields" data-conditional-for="Dikabelo">
+                            <label>Date of Last Dikabelo: <input type="date" name="members[${index}][DateOfLastDikabelo]"></label>
                         </div>
                     </div>
                 </div>
@@ -288,82 +511,82 @@
 
         function createChildBlock(index) {
              const block = document.createElement('div');
-             block.className = 'child-block p-6 border border-emerald-300 rounded-lg bg-white shadow-lg relative';
+             block.className = 'child-block';
              block.id = `child-${index}`;
              block.innerHTML = `
-                <h3 class="text-xl font-semibold text-emerald-700 mb-6 border-b pb-2">Child ${index + 1}</h3>
+                <h3>Child ${index + 1}</h3>
                 
-                <button type="button" onclick="removeBlock('child-${index}')" class="absolute top-6 right-6 text-red-500 hover:text-red-700 text-sm font-medium bg-gray-100 p-2 rounded-lg shadow-sm">Remove</button>
+                <button type="button" onclick="removeBlock('child-${index}')" class="remove-button">Remove</button>
                 
                 <!-- Basic Info -->
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                    <label class="block">First Name: <input type="text" name="children[${index}][FirstName]" class="mt-1 block w-full"></label>
-                    <label class="block">Last Name: <input type="text" name="children[${index}][LastName]" class="mt-1 block w-full"></label>
-                    <label class="block">Date of Birth: <input type="date" name="children[${index}][DOB]" onchange="calculateAge(this, 'children[${index}][Age]')" class="mt-1 block w-full"></label>
-                    <label class="block">Age: <input type="text" name="children[${index}][Age]" readonly class="mt-1 block w-full bg-gray-100 cursor-default"></label>
+                <div class="grid grid-4" style="margin-bottom: 20px;">
+                    <label>First Name: <input type="text" name="children[${index}][FirstName]"></label>
+                    <label>Last Name: <input type="text" name="children[${index}][LastName]"></label>
+                    <label>Date of Birth: <input type="date" name="children[${index}][DOB]" onchange="calculateAge(this, 'children[${index}][Age]')"></label>
+                    <label>Age: <input type="text" name="children[${index}][Age]" readonly></label>
                 </div>
                 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <label class="block">Catholic? (Yes/No option): 
-                        <select name="children[${index}][Catholic]" class="mt-1 block w-full">
+                <div class="grid grid-3" style="margin-bottom: 20px;">
+                    <label>Catholic? (Yes/No option): 
+                        <select name="children[${index}][Catholic]">
                             <option value="Yes">Yes</option>
                             <option value="No">No</option>
                         </select>
                     </label>
-                    <label class="block md:col-span-2">Church Activities: <input type="text" name="children[${index}][ChurchActivities]" class="mt-1 block w-full"></label>
+                    <label style="grid-column: span 2;">Church Activities: <input type="text" name="children[${index}][ChurchActivities]"></label>
                 </div>
 
-                <div class="border-t pt-6 space-y-6">
+                <div style="border-top: 1px solid #e5e7eb; padding-top: 20px; margin-top: 20px; display: grid; gap: 15px;">
                     
                     <!-- BAPTISM SUB-SECTION -->
-                    <div class="p-4 rounded-lg bg-emerald-50 border-l-4 border-emerald-400">
-                        <h4 class="text-emerald-700 font-bold mb-3">Baptism Sacrament</h4>
-                        <label class="block mb-4">Baptised? (Yes/No option): 
-                            <select name="children[${index}][Baptised]" onchange="toggleConditionalFields(this)" class="mt-1 block w-full">
+                    <div class="sub-section-card">
+                        <h4>Baptism Sacrament</h4>
+                        <label style="margin-bottom: 10px;">Baptised? (Yes/No option): 
+                            <select name="children[${index}][Baptised]" onchange="toggleConditionalFields(this)">
                                 <option value="No">No</option>
                                 <option value="Yes">Yes</option>
                             </select>
                         </label>
-                        <div class="conditional-fields bg-white p-4 rounded-lg border border-emerald-200" data-conditional-for="Baptised">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <label class="block">Date of Baptism: <input type="date" name="children[${index}][BaptismDate]" class="mt-1 block w-full"></label>
-                                <label class="block">Registration Number: <input type="text" name="children[${index}][RegistrationNumber]" class="mt-1 block w-full"></label>
-                                <label class="block">Church of Baptism: <input type="text" name="children[${index}][ChurchOfBaptism]" class="mt-1 block w-full"></label>
-                                <label class="block">Location of Church: <input type="text" name="children[${index}][LocationOfChurch]" class="mt-1 block w-full"></label>
+                        <div class="conditional-fields" data-conditional-for="Baptised">
+                            <div class="grid grid-2">
+                                <label>Date of Baptism: <input type="date" name="children[${index}][BaptismDate]"></label>
+                                <label>Registration Number: <input type="text" name="children[${index}][RegistrationNumber]"></label>
+                                <label>Church of Baptism: <input type="text" name="children[${index}][ChurchOfBaptism]"></label>
+                                <label>Location of Church: <input type="text" name="children[${index}][LocationOfChurch]"></label>
                             </div>
                         </div>
                     </div>
 
                     <!-- 1ST COMMUNION SUB-SECTION -->
-                    <div class="p-4 rounded-lg bg-emerald-50 border-l-4 border-emerald-400">
-                        <h4 class="text-emerald-700 font-bold mb-3">First Communion Sacrament</h4>
-                        <label class="block mb-4">1st Communion? (Yes/No option): 
-                            <select name="children[${index}][FirstCommunion]" onchange="toggleConditionalFields(this)" class="mt-1 block w-full">
+                    <div class="sub-section-card">
+                        <h4>First Communion Sacrament</h4>
+                        <label style="margin-bottom: 10px;">1st Communion? (Yes/No option): 
+                            <select name="children[${index}][FirstCommunion]" onchange="toggleConditionalFields(this)">
                                 <option value="No">No</option>
                                 <option value="Yes">Yes</option>
                             </select>
                         </label>
-                        <div class="conditional-fields bg-white p-4 rounded-lg border border-emerald-200" data-conditional-for="FirstCommunion">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <label class="block">Date 1st Communion: <input type="date" name="children[${index}][FirstCommunionDate]" class="mt-1 block w-full"></label>
-                                <label class="block">Church of 1st Communion: <input type="text" name="children[${index}][ChurchOfFirstCommunion]" class="mt-1 block w-full"></label>
+                        <div class="conditional-fields" data-conditional-for="FirstCommunion">
+                            <div class="grid grid-2">
+                                <label>Date 1st Communion: <input type="date" name="children[${index}][FirstCommunionDate]"></label>
+                                <label>Church of 1st Communion: <input type="text" name="children[${index}][ChurchOfFirstCommunion]"></label>
                             </div>
                         </div>
                     </div>
 
                     <!-- CONFIRMATION SUB-SECTION -->
-                    <div class="p-4 rounded-lg bg-emerald-50 border-l-4 border-emerald-400">
-                        <h4 class="text-emerald-700 font-bold mb-3">Confirmation Sacrament</h4>
-                        <label class="block mb-4">Confirmed? (Yes/No option): 
-                            <select name="children[${index}][Confirmation]" onchange="toggleConditionalFields(this)" class="mt-1 block w-full">
+                    <div class="sub-section-card">
+                        <h4>Confirmation Sacrament</h4>
+                        <label style="margin-bottom: 10px;">Confirmed? (Yes/No option): 
+                            <select name="children[${index}][Confirmation]" onchange="toggleConditionalFields(this)">
                                 <option value="No">No</option>
                                 <option value="Yes">Yes</option>
                             </select>
                         </label>
-                        <div class="conditional-fields bg-white p-4 rounded-lg border border-emerald-200" data-conditional-for="Confirmation">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <label class="block">Date of Confirmation: <input type="date" name="children[${index}][ConfirmationDate]" class="mt-1 block w-full"></label>
-                                <label class="block">Church of Confirmation: <input type="text" name="children[${index}][ChurchOfConfirmation]" class="mt-1 block w-full"></label>
+                        <div class="conditional-fields" data-conditional-for="Confirmation">
+                            <div class="grid grid-2">
+                                <label>Date of Confirmation: <input type="date" name="children[${index}][ConfirmationDate]"></label>
+                                <label>Church of Confirmation: <input type="text" name="children[${index}][ChurchOfConfirmation]"></label>
                             </div>
                         </div>
                     </div>
@@ -372,34 +595,11 @@
              return block;
         }
         
-        // Function to calculate age based on DOB
-        function calculateAge(dobInput, ageFieldName) {
-            const dob = new Date(dobInput.value);
-            const now = new Date();
-            let age = now.getFullYear() - dob.getFullYear();
-            const monthDiff = now.getMonth() - dob.getMonth();
-            
-            // Adjust age if current month/day is before birth month/day
-            if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < dob.getDate())) {
-                age--;
-            }
-
-            // Find the age input using the full name attribute
-            const form = dobInput.closest('form');
-            const ageInput = form.querySelector(`input[name="${ageFieldName}"]`);
-            if (ageInput) {
-                ageInput.value = age >= 0 ? age : '';
-            }
-        }
-
-
         // --- Dynamic Field Manager ---
 
         function addMember() {
             const container = document.getElementById('adult-members-container');
             const newBlock = createMemberBlock(memberIndex);
-            
-            // Add the new member block
             container.appendChild(newBlock); 
             memberIndex++; 
         }
@@ -407,18 +607,11 @@
         function addChild() {
             const container = document.getElementById('children-container');
             const newBlock = createChildBlock(childIndex);
-            
-            // Add the new child block
             container.appendChild(newBlock);
             childIndex++; 
         }
         
-        function removeBlock(id) {
-            document.getElementById(id).remove();
-            // The JSON extraction logic skips removed/empty blocks, so no re-indexing is needed.
-        }
-
-        // --- Data Extraction and Submission Logic (JSON) ---
+        // --- Data Extraction and Submission Logic ---
 
         /**
          * Gathers all form data into a structured JSON object.
@@ -440,8 +633,11 @@
                     const name = input.name;
                     // Check if the name starts with the required prefix, e.g., 'members[0][' or 'children[1]['
                     if (name && name.startsWith(prefix)) {
-                        const fieldKey = name.match(/\[(\w+)\]$/)[1]; // Extract the field name (e.g., 'FirstName')
-                        fields[fieldKey] = input.value;
+                        const fieldKeyMatch = name.match(/\[(\w+)\]$/);
+                        if (fieldKeyMatch) {
+                            const fieldKey = fieldKeyMatch[1]; // Extract the field name (e.g., 'FirstName')
+                            fields[fieldKey] = input.value;
+                        }
                     }
                 });
                 return fields;
@@ -450,7 +646,6 @@
             // Extract Adult Members
             document.querySelectorAll('.member-block').forEach((block, index) => {
                 const member = extractFields(block, `members[${index}]`);
-                // Only include members that have a first name filled out (to ignore removed/empty blocks)
                 if (member.FirstName) {
                     data.members.push(member);
                 }
@@ -459,7 +654,6 @@
             // Extract Children
             document.querySelectorAll('.child-block').forEach((block, index) => {
                 const child = extractFields(block, `children[${index}]`);
-                // Only include children that have a first name filled out
                 if (child.FirstName) {
                     data.children.push(child);
                 }
@@ -476,67 +670,74 @@
             const submitButton = document.getElementById('submit-button');
             const appsScriptUrl = form.action;
 
-            const payload = getFormDataAsJson(form);
+            const payloadObject = getFormDataAsJson(form);
 
             // Basic validation
-            if (!payload.BlockName || !payload.ResidentialAddress || !payload.ContactNo) {
+            if (!payloadObject.BlockName || !payloadObject.ResidentialAddress || !payloadObject.ContactNo) {
                 feedback.textContent = '❌ Please fill out all Household Information fields.';
-                feedback.className = 'mb-4 text-center text-red-600 text-lg font-bold block';
+                feedback.className = 'mb-4 error';
+                feedback.style.display = 'block';
                 return;
             }
-            if (payload.members.length === 0) {
-                 feedback.textContent = '❌ Please add at least one Adult Member.';
-                feedback.className = 'mb-4 text-center text-red-600 text-lg font-bold block';
+            if (payloadObject.members.length === 0) {
+                 feedback.textContent = '❌ Please add at least one Adult Member with a name.';
+                feedback.className = 'mb-4 error';
+                feedback.style.display = 'block';
                 return;
             }
             
             feedback.textContent = 'Submitting... Please wait.';
-            feedback.className = 'mb-4 text-center text-blue-600 text-lg font-medium block';
+            feedback.className = 'mb-4 pending';
+            feedback.style.display = 'block';
             submitButton.disabled = true;
 
+            // --- Convert JSON object to FormData for CORS-safe submission ---
+            const formData = new FormData();
+            formData.append('payload', JSON.stringify(payloadObject)); // Apps Script will read this as e.parameter.payload
             
-            // Set up retry logic for robust submission
+            
+            // Set up retry logic
             const maxRetries = 3;
             let currentRetry = 0;
             
             const attemptSubmit = () => {
+                // Fetch request sends FormData, avoiding CORS preflight issue.
                 fetch(appsScriptUrl, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json', // IMPORTANT: Using JSON
-                    },
-                    body: JSON.stringify(payload), // Send the JSON string
+                    body: formData, 
                 })
                 .then(response => {
-                    // Apps Script returns 'Success' or an error message as plain text
+                    // Apps Script should return 'Success' or an error message as plain text
                     return response.text(); 
                 })
                 .then(result => {
                     if (result.trim() === 'Success') {
                         feedback.textContent = '✅ Submission successful! Thank you for completing the census.';
-                        feedback.className = 'mb-4 text-center text-green-600 text-lg font-bold block';
+                        feedback.className = 'mb-4 success';
                         form.reset(); 
-                        // Re-initialize dynamic fields after reset
+                        
+                        // Reset dynamic fields
                         document.getElementById('adult-members-container').innerHTML = '';
                         document.getElementById('children-container').innerHTML = '';
                         memberIndex = 0;
                         childIndex = 0;
                         addMember(); // Re-add the first required member
+                    } else if (result.includes('Error:')) {
+                        throw new Error(result);
                     } else {
-                        // Handle error message returned by Apps Script
-                        throw new Error("API returned failure: " + result);
+                        throw new Error("API returned unexpected content: " + result);
                     }
                 })
                 .catch(error => {
                     console.error('Submission Error:', error);
                     if (currentRetry < maxRetries) {
                         currentRetry++;
-                        const delay = Math.pow(2, currentRetry) * 1000; // Exponential backoff
+                        const delay = Math.pow(2, currentRetry) * 1000; 
                         feedback.textContent = `Submission failed. Retrying in ${delay / 1000}s... (Attempt ${currentRetry}/${maxRetries})`;
                         setTimeout(attemptSubmit, delay);
                     } else {
-                        feedback.textContent = '❌ Submission failed after multiple attempts. Check console for details.';
-                        feedback.className = 'mb-4 text-center text-red-600 text-lg font-bold block';
+                        feedback.textContent = `❌ Submission failed after multiple attempts. Error: ${error.message}`;
+                        feedback.className = 'mb-4 error';
                     }
                 })
                 .finally(() => {
