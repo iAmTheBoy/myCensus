@@ -1,23 +1,37 @@
 // 🚨 REPLACE THIS WITH YOUR GOOGLE APPS SCRIPT WEB APP URL 🚨
-const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbzaoyCQC8O1ueXgUCQfAGaG2P_l6uxDt1AHiAXk2EK7DkXh9SEfwdYnH82juYUtCtRf/exec'; 
+// This URL must point to the *deployed* Apps Script Web App (Execute as: Me, Who has access: Anyone, even anonymous)
+const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbxYwqmB09yEatsCYjtiHLbCIcqlfaQs4_v0r_zgeUUyxu0qAHT3J-8dX57hHvYt9qlr/exec'; 
 
 let ALL_RECORDS = []; 
 let DISPLAYED_RECORDS = []; 
 let ACTIVE_ROW = null; 
-let ACTIVE_HOUSEHOLD_ID = null; // Store ID for Edit/Delete actions
+let SELECTED_HOUSEHOLD_ID = null; // Store the ID of the currently selected record
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // Initial call to hide the detail panel and action buttons on load
+    document.getElementById('detail-panel').style.display = 'none';
+    document.getElementById('action-buttons').style.display = 'none'; // Ensure buttons are hidden initially
+
     await fetchSummary();
     await fetchRecords();
     setupEventListeners();
 });
 
+// Utility function to display success/error/info messages
+function displayStatusMessage(message, type = 'success') {
+    const statusMessage = document.getElementById('status-message');
+    statusMessage.textContent = message;
+    statusMessage.className = `alert alert-${type}`;
+    statusMessage.style.display = 'block';
+    setTimeout(() => {
+        statusMessage.style.display = 'none';
+    }, 5000); // Hide after 5 seconds
+}
+
 function setupEventListeners() {
     const searchInput = document.getElementById('search-input');
     const columnFilter = document.getElementById('column-filter');
     const filterInput = document.getElementById('filter-input');
-    const editBtn = document.getElementById('edit-record-btn');
-    const deleteBtn = document.getElementById('delete-record-btn');
     
     columnFilter.addEventListener('change', () => {
         filterInput.disabled = columnFilter.value === "";
@@ -32,10 +46,6 @@ function setupEventListeners() {
     // Event Delegation on the Table Body
     document.getElementById('records-tbody').addEventListener('click', handleRecordClick);
 
-    // Event listeners for new buttons
-    editBtn.addEventListener('click', handleEditClick);
-    deleteBtn.addEventListener('click', handleDeleteClick);
-
     populateFilterColumns();
 }
 
@@ -45,282 +55,251 @@ function setupEventListeners() {
 function handleRecordClick(event) {
     const clickedRow = event.target.closest('tr');
 
-    if (clickedRow && clickedRow.dataset.householdId) {
-        showDetailPanel(clickedRow.dataset.householdId, clickedRow);
-    }
-}
-
-// === NEW FEATURE 2: EDIT/DELETE HANDLERS ===
-
-function handleEditClick() {
-    if (ACTIVE_HOUSEHOLD_ID) {
-        // Redirects to the index page, passing the Household_ID as a query parameter
-        // NOTE: The index.html file must be saved as edit_record.html in your deployment
-        window.location.href = `edit_record.html?householdId=${ACTIVE_HOUSEHOLD_ID}`;
-    }
-}
-
-async function handleDeleteClick() {
-    if (!ACTIVE_HOUSEHOLD_ID) return;
-
-    // Use a custom confirmation message box instead of alert()
-    const confirmation = window.confirm(`Are you sure you want to permanently delete record ${ACTIVE_HOUSEHOLD_ID}? This cannot be undone.`);
-    
-    if (confirmation) {
-        document.getElementById('status-message').textContent = `Deleting record ${ACTIVE_HOUSEHOLD_ID}...`;
-        document.getElementById('status-message').style.display = 'block';
+    if (clickedRow && clickedRow.dataset.id) {
+        // 1. Highlight the selected row
+        if (ACTIVE_ROW) {
+            ACTIVE_ROW.classList.remove('active');
+        }
+        clickedRow.classList.add('active');
+        ACTIVE_ROW = clickedRow;
         
-        try {
-            const url = `${API_BASE_URL}?action=deleteRecord&householdId=${ACTIVE_HOUSEHOLD_ID}`;
-            const response = await fetch(url, { method: 'DELETE' }); // Use DELETE method, handled by doGet in Apps Script
+        // 2. Find the record data and display details
+        SELECTED_HOUSEHOLD_ID = clickedRow.dataset.id;
+        const record = ALL_RECORDS.find(r => r.Household.Household_ID === SELECTED_HOUSEHOLD_ID);
+
+        if (record) {
+            displayRecordDetails(record);
             
-            if (!response.ok) throw new Error('Network response was not ok');
-            const data = await response.json();
+            // 3. Show the detail panel and action buttons
+            document.getElementById('detail-panel').style.display = 'flex';
+            document.getElementById('action-buttons').style.display = 'flex';
             
-            if (data.result === 'success') {
-                document.getElementById('status-message').className = 'alert alert-success';
-                document.getElementById('status-message').textContent = `✅ Record ${ACTIVE_HOUSEHOLD_ID} deleted successfully.`;
-                
-                // Refresh data and UI
-                await fetchSummary();
-                await fetchRecords();
-                
-                // Hide detail panel after deletion
-                document.getElementById('detail-panel').style.display = 'none';
-                ACTIVE_HOUSEHOLD_ID = null;
-                
-            } else {
-                throw new Error(data.message || 'Unknown deletion error.');
-            }
-        } catch (error) {
-            console.error('Deletion Error:', error);
-            document.getElementById('status-message').className = 'alert alert-error';
-            document.getElementById('status-message').textContent = `❌ Failed to delete record: ${error.message}`;
+            // 4. Hide delete confirmation if it was visible and re-enable buttons
+            cancelDelete(); 
         }
     }
 }
 
-// === API FETCHING ===
+// --- Action Button Functions ---
 
-async function fetchSummary() {
+/**
+ * Placeholder function for editing. This is a large feature that requires a separate form.
+ */
+function editRecord() {
+    displayStatusMessage(
+        `Editing functionality for Household ID: ${SELECTED_HOUSEHOLD_ID} is not yet implemented. 
+        To proceed, you would need to build a form interface similar to your submission form, but pre-filled with this data, and create a new Apps Script function (e.g., doPut) to handle data updates instead of just appending new rows.`, 
+        'info'
+    );
+}
+
+/**
+ * Shows the inline confirmation prompt for deletion.
+ */
+function prepareDelete() {
+    if (!SELECTED_HOUSEHOLD_ID) return;
+    document.getElementById('delete-id-span').textContent = SELECTED_HOUSEHOLD_ID;
+    document.getElementById('delete-confirmation').style.display = 'block'; // Use block for vertical layout
+    // Disable other action buttons while confirmation is visible
+    document.getElementById('print-btn').disabled = true;
+    document.getElementById('edit-btn').disabled = true;
+    document.getElementById('delete-btn').disabled = true;
+}
+
+/**
+ * Hides the inline confirmation prompt for deletion and re-enables main buttons.
+ */
+function cancelDelete() {
+    document.getElementById('delete-confirmation').style.display = 'none';
+    document.getElementById('print-btn').disabled = false;
+    document.getElementById('edit-btn').disabled = false;
+    document.getElementById('delete-btn').disabled = false;
+}
+
+/**
+ * Executes the record deletion via the Apps Script API.
+ */
+async function deleteRecord() {
+    if (!SELECTED_HOUSEHOLD_ID) {
+        displayStatusMessage('No record selected for deletion.', 'error');
+        return;
+    }
+
+    cancelDelete(); // Hide confirmation buttons
+    const householdIdToDelete = SELECTED_HOUSEHOLD_ID;
+    displayStatusMessage(`Deleting record ${householdIdToDelete}...`, 'info');
+
     try {
-        const url = `${API_BASE_URL}?action=getSummary`;
-        const response = await fetch(url);
-        if (!response.ok) throw new Error('Network response was not ok');
-        const data = await response.json();
-        
-        if (data.result === 'success') {
-            document.getElementById('total-households').textContent = data.data.households;
-            document.getElementById('total-members').textContent = data.data.members;
-            document.getElementById('total-children').textContent = data.data.children;
-        } else {
-            document.getElementById('status-message').textContent = `Error fetching summary: ${data.message}`;
+        // Use exponential backoff for robustness
+        let response;
+        const maxRetries = 3;
+        for (let i = 0; i < maxRetries; i++) {
+            response = await fetch(`${API_BASE_URL}?action=delete&householdId=${householdIdToDelete}`, {
+                method: 'GET', // Apps Script uses doGet for URL params
+                mode: 'cors'
+            });
+            if (response.ok) break;
+            if (i < maxRetries - 1) {
+                await new Promise(resolve => setTimeout(resolve, Math.pow(2, i) * 1000)); // 1s, 2s, 4s delay
+            }
         }
+
+        if (!response.ok) throw new Error('API request failed with status: ' + response.status);
+
+        const result = await response.json();
+        
+        if (result && result.result === 'success') {
+            displayStatusMessage(`✅ Record ${householdIdToDelete} and associated members/children deleted successfully.`);
+            
+            // 1. Clear details panel and reset state
+            document.getElementById('detail-content').innerHTML = '<h2>Select a Record to View Details</h2><p>Click on any row in the table to display the full household, member, and child data here. This view is printable.</p>';
+            document.getElementById('detail-panel').style.display = 'none';
+            document.getElementById('action-buttons').style.display = 'none';
+            SELECTED_HOUSEHOLD_ID = null;
+            if (ACTIVE_ROW) {
+                ACTIVE_ROW.classList.remove('active');
+                ACTIVE_ROW = null;
+            }
+
+            // 2. Re-fetch and display data
+            await fetchRecords(); 
+
+        } else {
+            displayStatusMessage(`❌ Deletion failed for ${householdIdToDelete}. Error: ${result ? result.error : 'Unknown API response.'}`, 'error');
+        }
+
     } catch (error) {
-        document.getElementById('status-message').textContent = `Failed to connect to API for summary. Check your API URL.`;
+        console.error('Deletion Error:', error);
+        displayStatusMessage(`❌ Network or API Error: Could not delete record. Check the Apps Script implementation. Error: ${error.message}`, 'error');
     }
 }
 
+
+// --- API Call Functions ---
+
+/**
+ * Fetches all detailed census records from the Apps Script.
+ */
 async function fetchRecords() {
-    document.getElementById('status-message').textContent = "Fetching all records...";
     try {
-        // Use the new doGet structure to request ALL records
-        const url = `${API_BASE_URL}?action=getRecords`;
-        const response = await fetch(url);
-        if (!response.ok) throw new Error('Network response was not ok');
+        displayStatusMessage('Fetching all records...', 'info');
+        
+        let response;
+        const maxRetries = 3;
+        for (let i = 0; i < maxRetries; i++) {
+            response = await fetch(`${API_BASE_URL}?action=getRecords`, {
+                method: 'GET',
+                mode: 'cors'
+            });
+            if (response.ok) break;
+            if (i < maxRetries - 1) {
+                await new Promise(resolve => setTimeout(resolve, Math.pow(2, i) * 1000));
+            }
+        }
+
+        if (!response.ok) throw new Error('Failed to fetch records from Apps Script.');
+
         const data = await response.json();
         
-        if (data.result === 'success') {
-            ALL_RECORDS = data.data;
+        if (data && data.records) {
+            ALL_RECORDS = data.records;
             DISPLAYED_RECORDS = ALL_RECORDS;
-            renderRecords(ALL_RECORDS);
-            document.getElementById('status-message').style.display = 'none';
+            renderTable(DISPLAYED_RECORDS);
+            displayStatusMessage(`✅ Successfully loaded ${ALL_RECORDS.length} household records.`);
         } else {
-            document.getElementById('status-message').textContent = `Error fetching records: ${data.message}`;
+             displayStatusMessage('⚠️ Apps Script returned an empty or malformed record list.', 'error');
         }
+
     } catch (error) {
-        document.getElementById('status-message').textContent = `Failed to connect to API for records. Check your API URL.`;
+        console.error('Fetch Records Error:', error);
+        displayStatusMessage(`❌ Error fetching records: ${error.message}. Check your API URL.`, 'error');
     }
 }
 
-
-// === DATA RENDERING AND FILTERING ===
-
-function populateFilterColumns() {
-    const allKeys = new Set();
-    
-    if (ALL_RECORDS.length > 0) {
-        const sample = ALL_RECORDS[0];
-        Object.keys(sample.Household).forEach(key => allKeys.add(key));
-        if (sample.Members.length > 0) {
-            Object.keys(sample.Members[0]).forEach(key => allKeys.add(key));
-        }
-        if (sample.Children.length > 0) {
-            Object.keys(sample.Children[0]).forEach(key => allKeys.add(key));
-        }
-    }
-
-    const select = document.getElementById('column-filter');
-    const sortedKeys = Array.from(allKeys).sort();
-    
-    sortedKeys.forEach(key => {
-        if (key.endsWith('_ID') || key === 'Timestamp' || key === 'Age') return; 
-        
-        const option = document.createElement('option');
-        option.value = key;
-        option.textContent = key.replace(/_/g, ' ');
-        select.appendChild(option);
-    });
+/**
+ * Fetches summary statistics (not used in current UI but kept for future).
+ */
+async function fetchSummary() {
+    // Placeholder for future summary data fetching
 }
 
-function applySearchFilter() {
-    const generalSearchTerm = document.getElementById('search-input').value.toLowerCase().trim();
-    const columnFilterKey = document.getElementById('column-filter').value;
-    const filterValue = document.getElementById('filter-input').value.toLowerCase().trim();
 
-    DISPLAYED_RECORDS = ALL_RECORDS.filter(record => {
-        let matchesGeneralSearch = false;
-        
-        // ... (Filter logic remains unchanged) ...
-        if (generalSearchTerm) {
-            const household = record.Household;
-            
-            if (
-                (household.Block_Name && household.Block_Name.toString().toLowerCase().includes(generalSearchTerm)) ||
-                (household.Residential_Address && household.Residential_Address.toString().toLowerCase().includes(generalSearchTerm))
-            ) {
-                matchesGeneralSearch = true;
-            }
+// --- UI Rendering Functions ---
 
-            if (record.Members.some(m => 
-                (m.First_Name && m.First_Name.toString().toLowerCase().includes(generalSearchTerm)) || 
-                (m.Last_Name && m.Last_Name.toString().toLowerCase().includes(generalSearchTerm))
-            )) {
-                matchesGeneralSearch = true;
-            }
-            
-            if (record.Children.some(c => 
-                (c.First_Name && c.First_Name.toString().toLowerCase().includes(generalSearchTerm)) || 
-                (c.Last_Name && c.Last_Name.toString().toLowerCase().includes(generalSearchTerm))
-            )) {
-                matchesGeneralSearch = true;
-            }
-        } else {
-            matchesGeneralSearch = true;
-        }
-        
-        if (generalSearchTerm && !matchesGeneralSearch) {
-            return false;
-        }
-
-        let matchesColumnFilter = false;
-        if (columnFilterKey && filterValue) {
-            if (record.Household[columnFilterKey] && record.Household[columnFilterKey].toString().toLowerCase().includes(filterValue)) {
-                matchesColumnFilter = true;
-            }
-            if (record.Members.some(m => m[columnFilterKey] && m[columnFilterKey].toString().toLowerCase().includes(filterValue))) {
-                matchesColumnFilter = true;
-            }
-            if (record.Children.some(c => c[columnFilterKey] && c[columnFilterKey].toString().toLowerCase().includes(filterValue))) {
-                matchesColumnFilter = true;
-            }
-            
-            return matchesColumnFilter; 
-        } else {
-            return matchesGeneralSearch; 
-        }
-    });
-
-    renderRecords(DISPLAYED_RECORDS);
-    // NEW FEATURE 1: Update result count
-    document.getElementById('result-count').textContent = `Showing ${DISPLAYED_RECORDS.length} of ${ALL_RECORDS.length} records.`;
-}
-
-function resetFilters() {
-    document.getElementById('search-input').value = '';
-    document.getElementById('column-filter').value = '';
-    document.getElementById('filter-input').value = '';
-    document.getElementById('filter-input').disabled = true;
-    applySearchFilter(); 
-}
-
-function renderRecords(records) {
+/**
+ * Populates the main table body with household records.
+ */
+function renderTable(records) {
     const tbody = document.getElementById('records-tbody');
-    tbody.innerHTML = '';
+    tbody.innerHTML = ''; // Clear existing rows
 
     if (records.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No records found matching your criteria.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No records found matching the filter criteria.</td></tr>';
         return;
     }
 
     records.forEach(record => {
         const household = record.Household;
-        const row = tbody.insertRow();
-        row.dataset.householdId = household.Household_ID;
-        
-        row.insertCell().textContent = household.Household_ID;
-        row.insertCell().textContent = household.Block_Name;
-        row.insertCell().textContent = household.Residential_Address;
-        row.insertCell().textContent = household.Contact_No;
-        row.insertCell().textContent = record.Members.length;
-        row.insertCell().textContent = record.Children.length;
-    });
+        const membersCount = record.Members ? record.Members.length : 0;
+        const childrenCount = record.Children ? record.Children.length : 0;
 
-    // Initial update of result count
-    document.getElementById('result-count').textContent = `Showing ${records.length} of ${ALL_RECORDS.length} records.`;
+        const row = tbody.insertRow();
+        row.dataset.id = household.Household_ID; // Store ID for click handling
+
+        row.insertCell().textContent = household.Household_ID;
+        row.insertCell().textContent = household.Block_Name || '';
+        row.insertCell().textContent = household.Residential_Address || '';
+        row.insertCell().textContent = household.Contact_No || '';
+        row.insertCell().textContent = membersCount;
+        row.insertCell().textContent = childrenCount;
+    });
 }
 
-
-// === DETAIL PANEL VIEW ===
-
-function showDetailPanel(householdId, clickedRow) {
-    const record = ALL_RECORDS.find(r => r.Household.Household_ID === householdId);
-    if (!record) return;
-
-    // Set the active ID for Edit/Delete buttons
-    ACTIVE_HOUSEHOLD_ID = householdId;
-
+/**
+ * Displays the full details of a selected record in the detail panel.
+ */
+function displayRecordDetails(record) {
     const detailContent = document.getElementById('detail-content');
-    const detailPanel = document.getElementById('detail-panel');
-    const printBtn = document.getElementById('edit-record-btn');
-    const editBtn = document.getElementById('edit-record-btn');
-    const deleteBtn = document.getElementById('delete-record-btn');
-    
-    // Highlight the clicked row
-    if (ACTIVE_ROW) {
-        ACTIVE_ROW.style.backgroundColor = '';
-    }
-    clickedRow.style.backgroundColor = '#d3eaff'; // Light blue highlight
-    ACTIVE_ROW = clickedRow;
-
-    // Helper to format the key
-    const formatKeyForDisplay = (key) => {
-        if (key.endsWith('_YN')) {
-            key = key.slice(0, -3) + ' (Yes/No)';
-        }
-        if (key === 'First_Communion') return 'First Holy Communion';
-        if (key === 'Date_1st_Communion') return 'Date of First Communion';
-        if (key === 'Church_of_1st_Communion') return 'Church of First Communion';
-        if (key === 'Civil_Court_Marriage_Date') return 'Civil Marriage Date';
-        
-        return key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-    };
-
-    // Helper to format a key-value pair
-    const formatPair = (key, value) => {
-        const formattedKey = formatKeyForDisplay(key);
-        const formattedValue = value instanceof Date ? value.toLocaleDateString() : (value || 'N/A');
-        return `<p><strong>${formattedKey}:</strong> ${formattedValue}</p>`;
-    };
-    
     let html = '';
 
+    // Helper to format key-value pairs
+    const formatPair = (key, value) => {
+        if (value === null || value === undefined || value === '') return '';
+        
+        let formattedValue = value;
+        
+        // Robust date formatting for date objects or date strings
+        if ((key.includes('Date') || key.includes('Timestamp') || key.includes('Birth')) && value) {
+             let date;
+             if (typeof value === 'string' || typeof value === 'number') {
+                 // Try parsing from string or number (timestamp)
+                 date = new Date(value);
+             } else if (value instanceof Date) {
+                 date = value;
+             }
+             
+             if (date && !isNaN(date.getTime())) {
+                 formattedValue = date.toLocaleDateString('en-US', { timeZone: 'UTC' });
+                 if (key.includes('Timestamp')) {
+                    // Include time for submission timestamp
+                    formattedValue += ' ' + date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' });
+                 }
+             } else {
+                 formattedValue = value; // Fallback to original value
+             }
+        }
+        
+        return `<div class="detail-pair"><span class="detail-label">${key.replace(/_/g, ' ')}:</span><span class="detail-value">${formattedValue}</span></div>`;
+    };
+
     // 1. Household Section
-    html += '<h2 style="color: #007bff; margin-top: 0;">Household Record: ' + record.Household.Household_ID + '</h2>';
+    html += '<h2>Household Record: ' + record.Household.Household_ID + '</h2>';
     html += '<h3>General Information</h3>';
     for (const key in record.Household) {
         if (key !== 'Household_ID' && key !== 'Timestamp') { 
             html += formatPair(key, record.Household[key]);
+        } else if (key === 'Timestamp') {
+             html += formatPair('Submission Date', record.Household[key]);
         }
     }
 
@@ -349,10 +328,63 @@ function showDetailPanel(householdId, clickedRow) {
     });
 
     detailContent.innerHTML = html;
-    detailPanel.style.display = 'block'; 
+}
+
+/**
+ * Populates the column filter dropdown based on table headers.
+ */
+function populateFilterColumns() {
+    const columnFilter = document.getElementById('column-filter');
+    const headers = document.querySelectorAll('#records-table th[data-column]');
     
-    // Show new buttons
-    document.getElementById('print-record-btn').style.display = 'inline-block';
-    editBtn.style.display = 'inline-block';
-    deleteBtn.style.display = 'inline-block';
+    headers.forEach(th => {
+        const option = document.createElement('option');
+        option.value = th.dataset.column;
+        option.textContent = th.textContent;
+        columnFilter.appendChild(option);
+    });
+}
+
+/**
+ * Applies general search and column-specific filter to the displayed records.
+ */
+function applySearchFilter() {
+    const searchInput = document.getElementById('search-input').value.toLowerCase().trim();
+    const columnFilter = document.getElementById('column-filter').value;
+    const filterInput = document.getElementById('filter-input').value.toLowerCase().trim();
+
+    // Reset list to all records
+    DISPLAYED_RECORDS = ALL_RECORDS.filter(record => {
+        const household = record.Household;
+        const allText = JSON.stringify(record).toLowerCase(); // Search all fields
+
+        // 1. Global Search Filter
+        const globalMatch = searchInput === '' || allText.includes(searchInput);
+
+        // 2. Column-Specific Filter
+        let columnMatch = true;
+        if (columnFilter !== '' && filterInput !== '') {
+            // Find the value in the Household object (since filter columns are from Household sheet)
+            const columnValue = (household[columnFilter] || '').toString().toLowerCase();
+            columnMatch = columnValue.includes(filterInput);
+        }
+
+        return globalMatch && columnMatch;
+    });
+
+    renderTable(DISPLAYED_RECORDS);
+}
+
+/**
+ * Resets all filters and displays all records.
+ */
+function resetFilters() {
+    document.getElementById('search-input').value = '';
+    document.getElementById('column-filter').value = '';
+    const filterInput = document.getElementById('filter-input');
+    filterInput.value = '';
+    filterInput.disabled = true;
+    filterInput.placeholder = "Value to search in selected column";
+    
+    applySearchFilter(); // Re-render with no filters
 }
