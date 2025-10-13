@@ -7,24 +7,8 @@
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f9; color: #333; }
         .container { max-width: 1400px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 15px rgba(0, 0, 0, 0.1); }
-        h1 { color: #007bff; border-bottom: 3px solid #007bff; padding-bottom: 10px; display: inline-block; margin-right: 20px;}
+        h1 { color: #007bff; border-bottom: 3px solid #007bff; padding-bottom: 10px; }
         
-        /* New Styles for buttons and header */
-        .header-controls { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; }
-        .action-buttons button { 
-            padding: 10px 15px; 
-            border: none; 
-            border-radius: 6px; 
-            cursor: pointer; 
-            font-weight: bold; 
-            transition: background-color 0.3s;
-        }
-        #add-record-btn {
-            background-color: #28a745; 
-            color: white;
-        }
-        #add-record-btn:hover { background-color: #218838; }
-
         /* Layout for Table and Detail Panel */
         #main-content { display: flex; gap: 20px; }
         #records-list-container { flex: 2; /* Takes up 60-70% width */ }
@@ -36,146 +20,106 @@
             padding: 20px;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
             display: none; /* Hidden by default */
-            max-height: calc(100vh - 150px); /* Limit height for scroll */
-            overflow-y: auto; /* Enable vertical scroll */
+            position: sticky;
+            top: 20px;
+            max-height: calc(100vh - 40px);
+            overflow-y: auto;
         }
-        #detail-panel h2 { color: #007bff; border-bottom: 1px solid #ccc; padding-bottom: 10px; margin-top: 0; }
-        #detail-panel h3 { color: #555; margin-top: 20px; border-left: 3px solid #007bff; padding-left: 10px; }
-        .detail-pair { margin-bottom: 5px; font-size: 0.9em; }
-        .detail-pair strong { display: inline-block; width: 150px; color: #000; }
-        .member-block, .child-block { border: 1px solid #eee; padding: 10px; margin-bottom: 10px; border-radius: 4px; background-color: white; }
 
         /* Summary Boxes */
-        #summary-section { display: flex; gap: 20px; margin-bottom: 20px; }
-        .summary-box { 
-            flex: 1; 
-            padding: 15px; 
-            background-color: #e9ecef; 
-            border-radius: 6px; 
-            text-align: center;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-        }
-        .summary-box h3 { margin: 0; font-size: 1.1em; color: #007bff; }
-        .summary-box p { font-size: 2em; font-weight: bold; margin: 5px 0 0; color: #333; }
-        
+        #summary-cards { display: flex; justify-content: space-around; margin-bottom: 20px; }
+        .card { padding: 15px; border-radius: 6px; text-align: center; flex: 1; margin: 0 10px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+        .card h2 { margin-top: 0; font-size: 1.5em; color: #333; }
+        .card p { font-size: 2em; margin: 5px 0 0; font-weight: bold; color: #007bff; }
+
+        /* Search & Filter Styles */
+        #search-controls { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
+        #search-controls input, #search-controls select, #block-filter-container select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        #column-search { display: flex; gap: 10px; }
+
         /* Table Styles */
-        #records-table { width: 100%; border-collapse: collapse; background: white; }
-        #records-table th, #records-table td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        #records-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        #records-table th, #records-table td { border: 1px solid #ddd; padding: 10px; text-align: left; }
         #records-table th { background-color: #007bff; color: white; cursor: pointer; }
-        #records-table tbody tr { transition: background-color 0.1s; cursor: pointer; }
-        #records-table tbody tr:hover { background-color: #f1f1f1; }
-        #records-table .active-row { background-color: #cce5ff !important; font-weight: bold; }
+        #records-table tr:hover { background-color: #e9f0ff; }
+        #records-table tbody tr { cursor: pointer; }
+        .active-row { background-color: #cce5ff !important; font-weight: bold; }
 
-        /* Filter Controls */
-        #filter-controls { 
-            display: flex; 
-            gap: 10px; 
-            align-items: center; 
-            margin-bottom: 20px; 
-            padding: 10px; 
-            background-color: #e9ecef;
-            border-radius: 6px;
-        }
-        #filter-controls input, #filter-controls select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
-        #filter-controls button { 
-            padding: 8px 15px; 
-            background-color: #6c757d; 
-            color: white; 
-            border: none; 
-            border-radius: 4px; 
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-        #filter-controls button:hover { background-color: #5a6268; }
+        /* Detail Panel Styles */
+        #detail-content h2, #detail-content h3 { border-bottom: 1px solid #ccc; padding-bottom: 5px; margin-top: 15px; }
+        .detail-pair { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px dotted #eee; }
+        .detail-key { font-weight: bold; }
+        .detail-value { text-align: right; }
+        .member-block, .child-block { border: 1px solid #cce5ff; padding: 10px; margin-top: 10px; border-radius: 4px; background-color: #fff; }
+        .print-btn { background-color: #6c757d; color: white; margin-top: 15px; display: block !important; width: 100%; }
+        .print-btn:hover { background-color: #5a6268; }
 
-        /* Detail Panel Action Buttons */
-        .detail-actions {
-            margin-top: 20px;
-            display: flex;
-            gap: 10px;
-            justify-content: flex-end;
+        /* Print Styles */
+        @media print {
+            body { margin: 0; padding: 0; background: white; }
+            .container, h1, #summary-cards, #search-controls, #block-filter-container { display: none; }
+            #main-content { display: block; margin: 0; }
+            #records-list-container { display: none; }
+            #detail-panel { 
+                display: block !important; 
+                flex: none; 
+                width: 100%; 
+                max-width: none; 
+                position: relative; 
+                top: auto; 
+                overflow-y: visible;
+                padding: 10px;
+                border: none;
+                box-shadow: none;
+                background-color: white;
+            }
+            .print-btn { display: none !important; }
         }
-        .detail-actions button, .print-btn {
-            padding: 10px 15px;
-            border-radius: 6px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-        #edit-record-btn {
-            background-color: #ffc107;
-            color: #333;
-            border: none;
-        }
-        #edit-record-btn:hover { background-color: #e0a800; }
-        
-        #delete-record-btn {
-            background-color: #dc3545;
-            color: white;
-            border: none;
-        }
-        #delete-record-btn:hover { background-color: #c82333; }
-
-        /* Search Results Counter */
-        #result-count {
-            margin-left: auto;
-            font-size: 0.9em;
-            font-weight: bold;
-            color: #007bff;
-        }
-        
-        /* Loading/Status Message */
-        #status-message {
-            padding: 10px;
-            margin-bottom: 20px;
-            border-radius: 4px;
-            text-align: center;
-            font-weight: bold;
-            display: none;
-        }
-        .alert-success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .alert-error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header-controls">
-            <h1>Admin Dashboard</h1>
-            <div class="action-buttons">
-                <!-- Feature 4: Add New Record Button -->
-                <button id="add-record-btn" onclick="window.location.href='index.html'">+ Add New Record</button>
+        <h1>Our Lady of Fatima Shrine Census Admin Dashboard</h1>
+        
+        <div id="summary-cards">
+            <div class="card">
+                <h2>Total Households</h2>
+                <p id="total-households">...</p>
+            </div>
+            <div class="card">
+                <h2>Total Members</h2>
+                <p id="total-members">...</p>
+            </div>
+            <div class="card">
+                <h2>Total Children</h2>
+                <p id="total-children">...</p>
             </div>
         </div>
 
-        <div id="status-message"></div>
-
-        <div id="summary-section">
-            <div class="summary-box">
-                <h3>Households</h3>
-                <p id="total-households">0</p>
-            </div>
-            <div class="summary-box">
-                <h3>Total Members (Adults)</h3>
-                <p id="total-members">0</p>
-            </div>
-            <div class="summary-box">
-                <h3>Total Children</h3>
-                <p id="total-children">0</p>
-            </div>
+        <div id="loading-status" style="text-align: center; margin-bottom: 10px; color: #ffc107;">Loading data...</div>
+        
+        <div id="block-filter-container" style="margin-bottom: 15px; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+            <h3>Filter by Block/Area</h3>
+            <label for="block-filter">Select Block:</label>
+            <select id="block-filter" onchange="applySearchFilter()">
+                <option value="">-- All Blocks --</option>
+                </select>
         </div>
+        <div id="search-controls">
+            <h3>Search & Filter</h3>
+            <input type="text" id="search-input" placeholder="Search by Name, Block, or Address..." style="width: 100%;">
+            
+            <div id="column-search">
+                <select id="column-filter">
+                    <option value="">-- Select Column to Filter --</option>
+                    </select>
+                <input type="text" id="filter-input" placeholder="Value to search in selected column" disabled>
+            </div>
 
-        <div id="filter-controls">
-            <input type="text" id="search-input" placeholder="Global Search (Name, Block, Address)">
-            <select id="column-filter">
-                <option value="">Filter by Column...</option>
-                <!-- Options populated by JS -->
-            </select>
-            <input type="text" id="filter-input" placeholder="Value to search in selected column" disabled>
-            <button onclick="applySearchFilter()">Apply Filter</button>
-            <button onclick="resetFilters()">Reset</button>
-            <!-- Feature 1: Search Result Count -->
-            <span id="result-count">Showing 0 of 0 records</span>
+            <div style="display: flex; gap: 10px;">
+                <button onclick="applySearchFilter()">Apply Filter</button>
+                <button onclick="resetFilters()">Reset</button>
+            </div>
         </div>
 
         <div id="main-content">
@@ -200,11 +144,6 @@
                 <div id="detail-content">
                     <h2>Select a Record to View Details</h2>
                     <p>Click on any row in the table to display the full household, member, and child data here. This view is printable.</p>
-                </div>
-                <!-- Feature 2 & 3: Edit and Delete Buttons -->
-                <div class="detail-actions" style="display:none;" id="detail-actions-container">
-                    <button id="edit-record-btn">✍️ Edit Record</button>
-                    <button id="delete-record-btn">🗑️ Delete Record</button>
                 </div>
                 <button class="print-btn" onclick="window.print()" style="display:none;">🖨️ Print Record</button>
             </div>
