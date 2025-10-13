@@ -1,10 +1,31 @@
 // 🚨 REPLACE THIS WITH YOUR GOOGLE APPS SCRIPT WEB APP URL 🚨
-const API_ENDPOINT = 'https://script.google.com/macros/s/AKfycbw05JwN3QBtcv7QOy08v2xg_sZPLO3wu8jKQG-eEzSf0kxn5ZclTElWbf0ugll8pjsk/exec';
+const API_ENDPOINT = 'https://script.google.com/macros/s/AKfycbxCETjVqQEAl_BAoW3wuUM9nCJWTfcJdPG_IQtk_Awqtgy2NyMMQa88PVLehuqQNnaQ/exec';
+
+// Global variable to hold the mode and Household ID
+let IS_EDIT_MODE = false;
+let EDIT_HOUSEHOLD_ID = null;
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Check for Edit Mode
+    const urlParams = new URLSearchParams(window.location.search);
+    const householdId = urlParams.get('id');
+    
+    if (householdId) {
+        IS_EDIT_MODE = true;
+        EDIT_HOUSEHOLD_ID = householdId;
+        setupEditMode(householdId);
+    } else {
+        // Normal New Record Mode setup
+        document.getElementById('form-title').textContent = 'Our Lady of Fatima Shrine Census - New Household Registration';
+        document.getElementById('submit-btn').textContent = 'Submit New Census Data';
+        // Add the initial member for a new form
+        addMember(); 
+    }
+
     // Attach listeners to the static Add buttons using their IDs
     document.getElementById('add-member-btn').addEventListener('click', addMember);
     document.getElementById('add-child-btn').addEventListener('click', addChild);
+    document.getElementById('census-form').addEventListener('submit', submitForm);
 
     // Use event delegation for the dynamically added elements (Remove buttons, Select fields, Date fields)
     document.addEventListener('click', function(e) {
@@ -17,382 +38,297 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('change', function(e) {
         // Handle Sacraments/Dikabelo fields toggle
         if (e.target.tagName === 'SELECT' && e.target.hasAttribute('onchange')) {
-            // Note: We read the function call directly from the attribute to avoid re-writing toggleFields logic
-            const classNameMatch = e.target.getAttribute('onchange').match(/toggleFields\(this, '(.*?)'
-\/);
+            const classNameMatch = e.target.getAttribute('onchange').match(/toggleFields\(this, '(.*?)'\)/);
             if (classNameMatch) {
                 toggleFields(e.target, classNameMatch[1]);
             }
         }
         // Handle Age calculation for children's Date of Birth
-        if (e.target.dataset.name === 'Date_of_Birth' && e.target.closest('.child-block')) {
+        if (e.target.classList.contains('child-dob-input')) {
             calculateAge(e.target);
         }
     });
-
-    // Handle form submission
-    document.getElementById('census-form').addEventListener('submit', handleSubmit);
-    
-    // --- NEW LOGIC FOR EDIT MODE ---
-    const urlParams = new URLSearchParams(window.location.search);
-    const householdId = urlParams.get('id');
-
-    if (householdId) {
-        // It's in EDIT MODE: Fetch data and pre-fill form
-        setupEditMode(householdId);
-    } else {
-        // It's in NEW SUBMISSION MODE: Add the first member
-        addMember();
-    }
 });
 
 /**
  * Sets up the form for editing an existing record.
- * @param {string} householdId - The Household_ID to fetch and edit.
  */
 async function setupEditMode(householdId) {
-    const statusMessage = document.getElementById('status-message');
-    const submitButton = document.getElementById('submit-btn');
-
-    document.getElementById('display-household-id').textContent = householdId;
-    document.getElementById('household-id-field').value = householdId;
-    submitButton.textContent = 'Updating Record...';
-    submitButton.disabled = true;
-    statusMessage.style.display = 'block';
-    statusMessage.className = 'alert';
-    statusMessage.innerHTML = 'Loading record details...';
+    document.getElementById('form-title').textContent = `Our Lady of Fatima Shrine Census - Editing Record: ${householdId}`;
+    document.getElementById('submit-btn').textContent = 'Update Record';
+    document.getElementById('household-id').value = householdId;
+    displayStatus('Fetching existing record data...', 'info');
 
     try {
-        const response = await fetch(`${API_ENDPOINT}?householdId=${householdId}`);
-        const result = await response.json();
-        
-        if (result.status === 'SUCCESS' && result.record) {
-            preFillForm(result.record);
-            submitButton.textContent = 'UPDATE RECORD';
-            submitButton.disabled = false;
-            statusMessage.className = 'alert alert-success';
-            statusMessage.innerHTML = `✅ Record ${householdId} loaded for editing.`;
-            document.getElementById('form-header').textContent = `Edit Household Record: ${householdId}`;
+        // Fetch a single record using the new doGet action
+        const response = await fetch(`${API_ENDPOINT}?action=getRecord&id=${householdId}`);
+        const data = await response.json();
+        const record = data.singleRecord;
+
+        if (record) {
+            prefillForm(record);
+            displayStatus(`Record ${householdId} loaded for editing.`, 'success');
         } else {
-            throw new Error(result.message || 'Failed to fetch record details.');
+            displayStatus('Error: Record not found.', 'error');
         }
+
     } catch (error) {
-        console.error('Fetch Record Error:', error);
-        statusMessage.className = 'alert alert-error';
-        statusMessage.innerHTML = `❌ Error loading record: ${error.message}. Check the Console for details.`;
+        console.error('Error fetching record for editing:', error);
+        displayStatus('Network Error: Could not load data for editing.', 'error');
     }
 }
 
 /**
- * Pre-fills the form with the fetched record data.
- * @param {object} record - The household record object.
+ * Pre-fills the form fields with the fetched record data.
  */
-function preFillForm(record) {
-    const householdContainer = document.getElementById('census-form');
-    const memberContainer = document.getElementById('members-container');
-    const childContainer = document.getElementById('children-container');
+function prefillForm(record) {
+    // 1. Household Info
+    const householdSection = document.getElementById('census-form');
+    for (const key in record.Household) {
+        const input = householdSection.querySelector(`[data-name="${key}"]`);
+        if (input) input.value = record.Household[key] || '';
+    }
 
-    // Clear initial dynamic sections
-    memberContainer.innerHTML = '';
-    childContainer.innerHTML = '';
-
-    // 1. Household Data
-    const householdFields = householdContainer.querySelectorAll('[data-name]');
-    householdFields.forEach(field => {
-        const name = field.dataset.name;
-        if (record.Household[name] !== undefined) {
-            // Convert timestamp back to YYYY-MM-DD if it's a date field
-            let value = record.Household[name];
-            if (field.type === 'date' && value instanceof Date) {
-                value = value.toISOString().substring(0, 10);
+    // 2. Members Info
+    document.getElementById('members-container').innerHTML = ''; // Clear initial member
+    record.Members.forEach(member => {
+        addMember(); // Add a new member section
+        const newMemberSection = document.getElementById('members-container').lastElementChild;
+        for (const key in member) {
+            const input = newMemberSection.querySelector(`[data-name="${key}"]`);
+            if (input) {
+                input.value = member[key] || '';
             }
-            field.value = value;
         }
-    });
-
-    // 2. Members Data
-    record.Members.forEach((memberData) => {
-        addMember(memberData);
-    });
-
-    // 3. Children Data
-    record.Children.forEach((childData) => {
-        addChild(childData);
-    });
-}
-
-/**
- * Toggles the visibility of sub-fields based on select input value.
- * @param {HTMLSelectElement} selectElement - The select element that triggered the change.
- * @param {string} className - The base class name of the sub-fields container (e.g., 'baptism').
- */
-function toggleFields(selectElement, className) {
-    const parentFormGroup = selectElement.closest('.form-group') || selectElement.closest('.member-block');
-    if (!parentFormGroup) return;
-
-    const subFieldsContainer = parentFormGroup.querySelector(`.${className}-fields`);
-    if (!subFieldsContainer) return;
-
-    if (selectElement.value === 'Yes') {
-        subFieldsContainer.style.display = 'block';
-        // Make sure date fields are required if visible
-        subFieldsContainer.querySelectorAll('input[type="date"]').forEach(input => input.required = true);
-    } else {
-        subFieldsContainer.style.display = 'none';
-        // Clear and remove required status if hidden
-        subFieldsContainer.querySelectorAll('input, select').forEach(input => {
-            input.value = '';
-            input.required = false;
+        // Manually trigger change events for selects to show/hide sub-fields
+        newMemberSection.querySelectorAll('select[onchange]').forEach(select => {
+            select.dispatchEvent(new Event('change'));
         });
-    }
+    });
+
+    // If there are no members, add one empty section
+    if (record.Members.length === 0) addMember();
+
+    // 3. Children Info
+    document.getElementById('children-container').innerHTML = '';
+    record.Children.forEach(child => {
+        addChild(); // Add a new child section
+        const newChildSection = document.getElementById('children-container').lastElementChild;
+        for (const key in child) {
+            const input = newChildSection.querySelector(`[data-name="${key}"]`);
+            if (input) input.value = child[key] || '';
+        }
+        // Manually calculate age after setting DOB
+        const dobInput = newChildSection.querySelector('.child-dob-input');
+        if (dobInput) calculateAge(dobInput);
+        
+        // Manually trigger change events for selects
+        newChildSection.querySelectorAll('select[onchange]').forEach(select => {
+            select.dispatchEvent(new Event('change'));
+        });
+    });
 }
 
+function displayStatus(message, type = 'info') {
+    const statusMessage = document.getElementById('status-message');
+    statusMessage.textContent = message;
+    statusMessage.className = `alert alert-${type}`;
+    statusMessage.style.display = 'block';
+}
 
-/**
- * Calculates a child's age from their Date of Birth input.
- * @param {HTMLInputElement} dobInput - The Date of Birth input element.
- */
 function calculateAge(dobInput) {
     const dob = new Date(dobInput.value);
-    const today = new Date();
-    const ageInput = dobInput.closest('.child-block').querySelector('[data-name="Age"]');
+    const ageOutput = dobInput.closest('.child-section').querySelector('.child-age-output');
 
-    if (isNaN(dob.getTime())) {
-        ageInput.value = 'Invalid Date';
+    if (isNaN(dob)) {
+        ageOutput.value = '';
         return;
     }
 
+    const today = new Date();
     let age = today.getFullYear() - dob.getFullYear();
-    const m = today.getMonth() - dob.getMonth();
+    const monthDiff = today.getMonth() - dob.getMonth();
     
-    // Adjust age if current date is before birthday this year
-    if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) {
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
         age--;
     }
     
-    ageInput.value = age >= 0 ? age : 'Invalid DOB';
+    ageOutput.value = age >= 0 ? age : 'N/A';
 }
 
-/**
- * Adds a new member block to the form.
- * @param {Object} [data] - Optional initial data to pre-fill the member block.
- */
-function addMember(data = null) {
-    const template = document.getElementById('member-template');
-    const memberContainer = document.getElementById('members-container');
-    const clone = document.importNode(template.content, true);
-    const newMemberBlock = clone.querySelector('.member-block');
+function toggleFields(selectElement, className) {
+    // Find the nearest parent container for member/child
+    const parentSection = selectElement.closest('.member-section, .child-section');
+    if (!parentSection) return;
     
-    memberContainer.appendChild(newMemberBlock);
-    updateTitles(memberContainer, 'Member');
-
-    // Pre-fill and initialize
-    if (data) {
-        fillSection(newMemberBlock, data);
-    }
-
-    // Manually trigger the toggle for sacrament fields in the new block if 'Yes' is selected
-    newMemberBlock.querySelectorAll('select[data-name$="_YN"]').forEach(select => {
-        const classNameMatch = select.getAttribute('onchange').match(/toggleFields\\(this, '(.*?)'\\)/);
-        if (classNameMatch && select.value === 'Yes') {
-            toggleFields(select, classNameMatch[1]);
-        }
-    });
-}
-
-/**
- * Adds a new child block to the form.
- * @param {Object} [data] - Optional initial data to pre-fill the child block.
- */
-function addChild(data = null) {
-    const template = document.getElementById('child-template');
-    const childContainer = document.getElementById('children-container');
-    const clone = document.importNode(template.content, true);
-    const newChildBlock = clone.querySelector('.child-block');
-
-    childContainer.appendChild(newChildBlock);
-    updateTitles(childContainer, 'Child');
-
-    // Pre-fill and initialize
-    if (data) {
-        fillSection(newChildBlock, data);
-        // Recalculate age after filling DOB
-        const dobInput = newChildBlock.querySelector('[data-name="Date_of_Birth"]');
-        if (dobInput.value) {
-            calculateAge(dobInput);
-        }
-    }
-}
-
-/**
- * Fills a section (member or child) with provided data.
- * @param {HTMLElement} sectionElement - The member or child block element.
- * @param {Object} data - The data object to fill.
- */
-function fillSection(sectionElement, data) {
-    sectionElement.querySelectorAll('[data-name]').forEach(field => {
-        const name = field.dataset.name;
-        if (data[name] !== undefined) {
-            let value = data[name];
-            // Format dates (assuming Apps Script returns date objects or ISO strings)
-            if (field.type === 'date' && value) {
-                if (value instanceof Date) {
-                    value = value.toISOString().substring(0, 10);
-                } else if (typeof value === 'string' && value.match(/\\d{4}-\\d{2}-\\d{2}/)) {
-                    // Check if it's already in YYYY-MM-DD format
-                } else {
-                    // Try to convert timestamp/other string to YYYY-MM-DD
-                    const date = new Date(value);
-                    if (!isNaN(date.getTime())) {
-                        value = date.toISOString().substring(0, 10);
-                    }
-                }
-            }
-            field.value = value;
-            // Handle select fields to ensure value is set correctly
-            if (field.tagName === 'SELECT') {
-                field.value = value;
-            }
-        }
-    });
-}
-
-
-/**
- * Removes a member or child block.
- * @param {HTMLButtonElement} removeButton - The remove button that was clicked.
- */
-function removeSection(removeButton) {
-    const block = removeButton.closest('.member-block') || removeButton.closest('.child-block');
-    if (!block) return;
+    // Find the specific sub-fields container within that parent
+    const subFields = parentSection.querySelector(`.${className}-fields`);
     
-    const container = block.parentNode;
-    container.removeChild(block);
-    updateTitles(container, block.classList.contains('member-block') ? 'Member' : 'Child');
-
-    // If it was the last member, add an empty one back to ensure there is at least one
-    if (container.id === 'members-container' && container.children.length === 0) {
-        addMember();
+    if (subFields) {
+        subFields.style.display = selectElement.value === 'Yes' ? 'block' : 'none';
+        // Clear fields when hidden to prevent submission of irrelevant data
+        if (selectElement.value !== 'Yes') {
+            subFields.querySelectorAll('input, select').forEach(input => input.value = '');
+        }
     }
 }
 
-/**
- * Updates the sequential titles of dynamic sections.
- * @param {HTMLElement} container - The container (members-container or children-container).
- * @param {string} prefix - 'Member' or 'Child'.
- */
-function updateTitles(container, prefix) {
-    Array.from(container.children).forEach((block, index) => {
-        const titleElement = block.querySelector(`.${prefix.toLowerCase()}-title`);
-        if (titleElement) {
-            titleElement.textContent = `${prefix} ${index + 1}`;
-        }
+function addSection(containerId, templateId, counterSelector, sectionClass) {
+    const container = document.getElementById(containerId);
+    const template = document.getElementById(templateId);
+    const clone = template.content.cloneNode(true);
+    const newSection = clone.querySelector(`.${sectionClass}`);
+
+    // Update count
+    const newCount = container.children.length + 1;
+    const countElement = newSection.querySelector(counterSelector);
+    if (countElement) countElement.textContent = newCount;
+
+    container.appendChild(newSection);
+
+    // Initial check for required fields visibility
+    newSection.querySelectorAll('select[onchange]').forEach(select => {
+        // Ensure the change logic is run for initial state (e.g., to hide fields if default is 'No')
+        select.dispatchEvent(new Event('change'));
+    });
+}
+
+function addMember() {
+    addSection('members-container', 'member-template', '.member-count', 'member-section');
+}
+
+function addChild() {
+    addSection('children-container', 'child-template', '.child-count', 'child-section');
+}
+
+function removeSection(button) {
+    const section = button.closest('.member-section, .child-section');
+    if (section) {
+        const container = section.parentElement;
+        section.remove();
+        // Re-count sections after removal
+        recountSections(container);
+    }
+}
+
+function recountSections(container) {
+    const isMember = container.id === 'members-container';
+    const counterSelector = isMember ? '.member-count' : '.child-count';
+    let count = 1;
+    container.querySelectorAll(isMember ? '.member-section' : '.child-section').forEach(section => {
+        const countElement = section.querySelector(counterSelector);
+        if (countElement) countElement.textContent = count++;
     });
 }
 
 /**
- * Main form submission handler.
+ * Main form submission handler. Now handles both NEW and UPDATE.
  */
-async function handleSubmit(e) {
+async function submitForm(e) {
     e.preventDefault();
-    
-    const form = e.target;
     const submitButton = document.getElementById('submit-btn');
     const statusMessage = document.getElementById('status-message');
 
-    statusMessage.style.display = 'none';
+    // 1. Disable button and update status
     submitButton.disabled = true;
-    submitButton.textContent = 'Processing...';
+    submitButton.textContent = IS_EDIT_MODE ? 'Updating...' : 'Submitting...';
+    displayStatus('Processing data...', 'info');
 
-    // 1. Extract Household Data (including the hidden Household_ID)
+    // 2. Collect Household Data
     const householdData = {};
-    Array.from(form.querySelectorAll('.form-group input, .form-group select, input[type="hidden"]')).forEach(input => {
+    document.querySelectorAll('#census-form > .form-group input, #census-form > .form-group select').forEach(input => {
         if (input.dataset.name) {
             householdData[input.dataset.name] = input.value;
         }
     });
 
-    // 2. Extract Members and Children Data
-    const membersArray = extractSectionData(document.getElementById('members-container'));
-    const childrenArray = extractSectionData(document.getElementById('children-container'));
+    // Get the Household_ID from the hidden field (needed for updates)
+    const hiddenIdInput = document.getElementById('household-id');
+    if (hiddenIdInput && hiddenIdInput.dataset.name) {
+        householdData[hiddenIdInput.dataset.name] = hiddenIdInput.value;
+    }
 
-    // Basic Validation Check (ensure at least one member for a valid household)
+
+    // 3. Collect Members Data
+    const membersArray = [];
+    document.querySelectorAll('#members-container > .member-section').forEach(section => {
+        const memberData = {};
+        section.querySelectorAll('input, select').forEach(input => {
+            if (input.dataset.name) {
+                // Collect only visible fields
+                const subFieldContainer = input.closest('.sub-fields');
+                if (!subFieldContainer || subFieldContainer.style.display !== 'none') {
+                    memberData[input.dataset.name] = input.value;
+                }
+            }
+        });
+        membersArray.push(memberData);
+    });
+
     if (membersArray.length === 0) {
-        statusMessage.className = 'alert alert-error';
-        statusMessage.innerHTML = '❌ A household must contain at least one member.';
-        statusMessage.style.display = 'block';
+        displayStatus('❌ Error: You must add at least one adult member.', 'error');
         submitButton.disabled = false;
-        submitButton.textContent = householdData.Household_ID ? 'UPDATE RECORD' : 'Submit Census Data';
+        submitButton.textContent = IS_EDIT_MODE ? 'Update Record' : 'Submit Census Data';
         return;
     }
 
-    // 3. Create Final Payload (Determine command based on Household_ID)
-    const householdId = householdData.Household_ID;
-    const command = householdId ? 'UPDATE' : 'SUBMIT_NEW';
+    // 4. Collect Children Data
+    const childrenArray = [];
+    document.querySelectorAll('#children-container > .child-section').forEach(section => {
+        const childData = {};
+        section.querySelectorAll('input, select').forEach(input => {
+            if (input.dataset.name) {
+                 // Collect only visible fields
+                const subFieldContainer = input.closest('.sub-fields');
+                if (!subFieldContainer || subFieldContainer.style.display !== 'none') {
+                    childData[input.dataset.name] = input.value;
+                }
+            }
+        });
+        childrenArray.push(childData);
+    });
 
+    // 5. Create Final Payload (with action and ID for update mode)
     const finalPayload = {
-        command: command, // New: tells Apps Script whether to create or update
         household: householdData,
         members: membersArray, 
-        children: childrenArray
+        children: childrenArray,
+        // Add specific keys for Apps Script routing
+        action: IS_EDIT_MODE ? 'UPDATE' : 'NEW',
+        Household_ID: EDIT_HOUSEHOLD_ID // Null for new, ID for update
     };
 
-    // 4. Send to Google Apps Script Web App
+    // 6. Send to Google Apps Script Web App
     try {
-        const response = await fetch(API_ENDPOINT, {
-            method: 'POST',
-            // mode: 'no-cors' is NOT used for responses that need to be read (like JSON status)
-            // Assuming your Apps Script is deployed for access by 'Anyone' and CORS is handled by GAS.
+        await fetch(API_ENDPOINT, {
+            method: 'POST', // Always POST for Apps Script web app
+            mode: 'no-cors', 
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify(finalPayload),
         });
-
-        // The response will be the JSON we set in Apps Script
-        const result = await response.json();
         
-        if (result.status === 'SUCCESS') {
-            statusMessage.className = 'alert alert-success';
-            statusMessage.innerHTML = `✅ ${result.message} (ID: ${result.householdId})`;
-            
-            // Only clear the form on NEW submission
-            if (command !== 'UPDATE') {
-                form.reset();
-                document.getElementById('members-container').innerHTML = '';
-                document.getElementById('children-container').innerHTML = '';
-                addMember(); // Add back the initial member
-            }
+        // Show success message
+        statusMessage.className = 'alert alert-success';
+        if (IS_EDIT_MODE) {
+            statusMessage.innerHTML = '✅ Data updated successfully! You can close this window now.';
         } else {
-            throw new Error(result.message || 'Unknown error during submission.');
+            statusMessage.innerHTML = '✅ Data submitted successfully! Thank you.';
+            // Reset dynamic sections only for new submissions
+            document.getElementById('census-form').reset();
+            document.getElementById('members-container').innerHTML = '';
+            document.getElementById('children-container').innerHTML = '';
+            addMember(); // Add back the initial member
         }
-
+        
     } catch (error) {
         console.error('Submission Error:', error);
         statusMessage.className = 'alert alert-error';
-        statusMessage.innerHTML = `❌ Error: ${error.message}. Check the Console for details.`;
+        statusMessage.innerHTML = `❌ Network Error: Could not submit data. Check your API URL and internet connection.`;
     } finally {
         statusMessage.style.display = 'block';
         submitButton.disabled = false;
-        submitButton.textContent = householdId ? 'UPDATE RECORD' : 'Submit Census Data';
+        submitButton.textContent = IS_EDIT_MODE ? 'Update Record' : 'Submit Census Data';
     }
-}
-
-/**
- * Helper function to extract data from a container of member/child blocks.
- * @param {HTMLElement} container - The members-container or children-container.
- * @returns {Array<Object>} Array of extracted data objects.
- */
-function extractSectionData(container) {
-    const dataArray = [];
-    Array.from(container.children).forEach(block => {
-        const blockData = {};
-        Array.from(block.querySelectorAll('[data-name]')).forEach(input => {
-            if (input.dataset.name) {
-                blockData[input.dataset.name] = input.value;
-            }
-        });
-        dataArray.push(blockData);
-    });
-    return dataArray;
 }
