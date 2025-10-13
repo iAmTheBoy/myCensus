@@ -1,5 +1,5 @@
 // 🚨 REPLACE THIS WITH YOUR GOOGLE APPS SCRIPT WEB APP URL 🚨
-const API_ENDPOINT = 'https://script.google.com/macros/s/AKfycbzaoyCQC8O1ueXgUCQfAGaG2P_l6uxDt1AHiAXk2EK7DkXh9SEfwdYnH82juYUtCtRf/exec';
+const API_ENDPOINT = 'https://script.google.com/macros/s/AKfycbxYwqmB09yEatsCYjtiHLbCIcqlfaQs4_v0r_zgeUUyxu0qAHT3J-8dX57hHvYt9qlr/exec';
 
 let EDIT_HOUSEHOLD_ID = null;
 
@@ -316,3 +316,4 @@ function addChild(callCalculateAge = true) {
 function removeSection(button) {
     button.closest('[data-type]').remove();
 }
+
