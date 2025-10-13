@@ -1,5 +1,5 @@
 // 🚨 REPLACE THIS WITH YOUR GOOGLE APPS SCRIPT WEB APP URL 🚨
-const API_ENDPOINT = 'https://script.google.com/macros/s/AKfycbyzpmV3d2etqNpujAQUWcrRfs-hPcBjB20mru-64Pdf10kWv-3W3lwWf1Ya0S_Mj91-/exec';
+const API_ENDPOINT = 'https://script.google.com/macros/s/AKfycby7cY1176Uv4l80uLIn4NGj4bjTmWf-1Buai7shFqkzRctFEJlQ-8wEuR3Kk0uuNoLl/exec';
 
 /**
  * NEW FEATURE: Handles the click event for the "Copy HHD No" button to autofill the member's contact.
@@ -211,3 +211,4 @@ async function handleFormSubmit(event) {
 }
 
 document.getElementById('census-form').addEventListener('submit', handleFormSubmit);
+
