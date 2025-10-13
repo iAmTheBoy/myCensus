@@ -11,89 +11,101 @@
         h3, h4 { margin-top: 5px; color: #555; }
         .form-group { margin-bottom: 15px; }
         label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9em; }
-        input[type="text"], input[type="date"], select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; margin-bottom: 10px; }
-        button { padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; margin-right: 10px; font-weight: bold; }
-        .submit-btn { background-color: #28a745; color: white; }
-        .add-btn { background-color: #007bff; color: white; }
-        .remove-btn { background-color: #dc3545; color: white; }
-        .alert { padding: 10px; margin-bottom: 15px; border-radius: 4px; display: none; }
-        .alert-error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        input[type="text"], input[type="date"], select, input[type="number"] { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; margin-bottom: 10px; }
+        button { padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; transition: background-color 0.3s; margin-right: 10px;}
+        .add-btn { background-color: #28a745; color: white; }
+        .add-btn:hover { background-color: #218838; }
+        .remove-btn { background-color: #dc3545; color: white; margin-top: 10px; }
+        .remove-btn:hover { background-color: #c82333; }
+        .submit-btn { background-color: #007bff; color: white; margin-top: 20px; padding: 15px 25px; font-size: 1.1em; }
+        .submit-btn:hover:not(:disabled) { background-color: #0056b3; }
+        .submit-btn:disabled { background-color: #6c757d; cursor: not-allowed; }
+
+        .member-section, .child-section { border: 1px solid #ddd; padding: 15px; margin-bottom: 20px; border-radius: 6px; background-color: #f8f8f8; }
+        .child-section h4 { border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        .sub-fields { border: 1px dashed #ccc; padding: 10px; margin-top: 10px; border-radius: 4px; background-color: #fff; }
+        
+        /* Loading/Status Message */
+        #status-message {
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            text-align: center;
+            font-weight: bold;
+            display: none;
+        }
         .alert-success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .member-block, .child-block { border: 1px solid #ddd; padding: 15px; margin-bottom: 20px; border-radius: 4px; background-color: #f9f9f9; position: relative; }
-        .remove-btn { position: absolute; top: 10px; right: 10px; padding: 5px 10px; font-size: 0.8em; }
-        .sub-fields { border-left: 3px solid #007bff; padding-left: 10px; margin-top: 5px; margin-bottom: 10px; }
-        .form-title { text-align: center; color: #007bff; }
+        .alert-error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .alert-info { background-color: #cce5ff; color: #004085; border: 1px solid #b8daff; }
         
         /* Responsive adjustments */
-        @media (max-width: 768px) {
-            .container { margin: 10px; padding: 15px; }
+        @media (max-width: 600px) {
+            .container { padding: 10px; margin: 10px; }
+            .submit-btn { padding: 12px 20px; }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1 id="form-header" class="form-title">New Household Census Submission</h1>
-        <div id="status-message" class="alert"></div>
+        <!-- H1 will be updated by JS based on mode (New or Edit) -->
+        <h1 id="form-title">Our Lady of Fatima Shrine Census</h1>
+        
+        <div id="status-message"></div>
 
         <form id="census-form">
-            <!-- Hidden field for Household ID (Used ONLY for Admin Edit/Update) -->
-            <input type="hidden" id="household-id-field" data-name="Household_ID" value="">
-            
-            <h2>Household Information</h2>
+            <!-- Hidden field to store Household ID for updates -->
+            <input type="hidden" id="household-id" data-name="Household_ID">
+
+            <h2>1. Household Information</h2>
             <div class="form-group">
-                <label>Block Name</label>
-                <select id="block-name" data-name="Block_Name">
-                    <option value="">Select Block</option>
-                    <option value="A">Block A</option>
-                    <option value="B">Block B</option>
-                    <option value="C">Block C</option>
-                    <!-- Add more blocks as needed -->
-                </select>
-            </div>
-            <div class="form-group">
+                <label>Block Name/Area</label>
+                <input type="text" data-name="Block_Name" required>
+
                 <label>Residential Address</label>
                 <input type="text" data-name="Residential_Address" required>
-            </div>
-            <div class="form-group">
-                <label>Contact Number (Household Head)</label>
+
+                <label>Contact No. (Main)</label>
                 <input type="text" data-name="Contact_No" required>
             </div>
 
-            <h2 id="members-heading">Adult Members (18+)</h2>
+            <h2>2. Adult Members (18+)</h2>
             <div id="members-container">
-                <!-- Member 1 will be added by default in script.js -->
+                <!-- Initial member added by script.js -->
             </div>
-            <button type="button" id="add-member-btn" class="add-btn">➕ Add Another Adult Member</button>
+            <button type="button" id="add-member-btn" class="add-btn">+ Add Another Adult Member</button>
 
-            <h2 id="children-heading">Children Particulars (Under 18)</h2>
+            <h2 style="margin-top: 30px;">3. Children Particulars (Under 18)</h2>
             <div id="children-container">
-                <!-- Children will be added here -->
+                <!-- Children sections added here -->
             </div>
-            <button type="button" id="add-child-btn" class="add-btn">➕ Add Another Child</button>
+            <button type="button" id="add-child-btn" class="add-btn">+ Add Another Child</button>
             
-            <hr style="margin: 30px 0;">
             <button type="submit" id="submit-btn" class="submit-btn">Submit Census Data</button>
         </form>
-        
+
         <!-- Templates for dynamic sections -->
         <template id="member-template">
-            <div class="member-block">
-                <button type="button" class="remove-btn">✖️ Remove Member</button>
-                <h4 class="member-title">Member </h4>
-                
-                <label>First Name</label><input type="text" data-name="First_Name" required>
-                <label>Last Name</label><input type="text" data-name="Last_Name" required>
-                <label>Gender</label><select data-name="Gender"><option>Male</option><option>Female</option></select>
-                <label>Date of Birth</label><input type="date" data-name="Date_of_Birth" required>
-                <label>Marital Status</label><select data-name="Marital_Status"><option>Single</option><option>Married</option><option>Divorced</option><option>Widowed</option></select>
-                <label>Occupation</label><input type="text" data-name="Occupation">
-                
-                <h3 style="margin-top: 20px;">Sacraments/Dikabelo</h3>
+            <div class="member-section">
                 <div class="form-group">
-                    <label>Baptised?</label><select data-name="Baptism_YN" onchange="toggleFields(this, 'baptism')"><option>No</option><option>Yes</option></select>
+                    <h3>Member <span class="member-count">1</span> Details</h3>
+                    <button type="button" class="remove-btn">Remove Member</button>
+                    
+                    <label>First Name</label><input type="text" data-name="First_Name" required>
+                    <label>Last Name</label><input type="text" data-name="Last_Name" required>
+                    <label>Date of Birth</label><input type="date" data-name="Date_of_Birth" required>
+                    <label>Gender</label><select data-name="Gender"><option>Male</option><option>Female</option></select>
+                    <label>Marital Status</label><select data-name="Marital_Status">
+                        <option>Single</option>
+                        <option>Married</option>
+                        <option>Divorced</option>
+                        <option>Widowed</option>
+                        <option>Separated</option>
+                    </select>
+
+                    <h4 style="margin-top: 20px;">Sacraments/Dikabelo</h4>
+                    <label>Baptism?</label><select data-name="Baptism_YN" onchange="toggleFields(this, 'baptism')"><option>No</option><option>Yes</option></select>
                     <div class="sub-fields baptism-fields" style="display:none;">
-                        <label>Date of Baptism</label><input type="date" data-name="Date_of_Baptism">
-                        <label>Registration Number</label><input type="text" data-name="Registration_Number">
+                        <label>Registration Number (if known)</label><input type="text" data-name="Registration_Number">
                         <label>Church of Baptism</label><input type="text" data-name="Church_of_Baptism">
                         <label>Location of Church</label><input type="text" data-name="Location_of_Church">
                     </div>
@@ -112,17 +124,26 @@
                 </div>
             </div>
         </template>
-        
+
         <template id="child-template">
-            <div class="child-block">
-                <button type="button" class="remove-btn">✖️ Remove Child</button>
-                <h4 class="child-title">Child </h4>
-                
-                <label>First Name</label><input type="text" data-name="First_Name" required>
-                <label>Last Name</label><input type="text" data-name="Last_Name" required>
-                <label>Gender</label><select data-name="Gender"><option>Male</option><option>Female</option></select>
-                <label>Date of Birth</label><input type="date" data-name="Date_of_Birth" required onchange="calculateAge(this)">
-                <label>Age (Calculated)</label><input type="text" data-name="Age" readonly placeholder="Calculated Age">
+            <div class="child-section">
+                <div class="form-group">
+                    <h4>Child <span class="child-count">1</span> Details</h4>
+                    <button type="button" class="remove-btn">Remove Child</button>
+                    
+                    <label>First Name</label><input type="text" data-name="First_Name" required>
+                    <label>Last Name</label><input type="text" data-name="Last_Name" required>
+                    <label>Date of Birth</label><input type="date" data-name="Date_of_Birth" class="child-dob-input" required>
+                    <label>Age (Auto-calculated)</label><input type="text" data-name="Age" class="child-age-output" readonly>
+                    <label>Gender</label><select data-name="Gender"><option>Male</option><option>Female</option></select>
+
+                    <h4 style="margin-top: 20px;">Sacraments/Dikabelo</h4>
+                    <label>Baptism?</label><select data-name="Baptism_YN" onchange="toggleFields(this, 'child-baptism')"><option>No</option><option>Yes</option></select>
+                    <div class="sub-fields child-baptism-fields" style="display:none;">
+                        <label>Church of Baptism</label><input type="text" data-name="Child_Church_of_Baptism">
+                        <label>Location of Church</label><input type="text" data-name="Child_Location_of_Church">
+                    </div>
+                </div>
             </div>
         </template>
     </div>
