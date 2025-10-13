@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard | Church Census</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f9; color: #333; }
+        .container { max-width: 1400px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 15px rgba(0, 0, 0, 0.1); }
+        h1 { color: #007bff; border-bottom: 3px solid #007bff; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        
+        /* Layout for Table and Detail Panel */
+        #main-content { display: flex; gap: 20px; }
+        #records-list-container { flex: 2; /* Takes up 60-70% width */ }
+        #detail-panel { 
+            flex: 1; /* Takes up 30-40% width */
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            display: none; /* Hidden by default */
+            max-height: 80vh; 
+            overflow-y: auto;
+        }
+
+        /* Summary, Search, Table Styles */
+        #summary-dashboard { display: flex; justify-content: space-around; margin-bottom: 25px; }
+        .summary-box { background-color: #e9ecef; border-radius: 6px; padding: 20px; text-align: center; width: 30%; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05); }
+        .summary-box h3 { margin: 0; font-size: 1.1em; color: #555; }
+        .summary-box p { font-size: 2.5em; font-weight: bold; color: #007bff; margin-top: 5px; }
+
+        #search-container { margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 6px; background-color: #f8f9fa; }
+        #search-container input, #search-container select { padding: 8px; margin-right: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        #search-input { width: 300px; }
+        #filter-input { width: 180px; }
+        
+        /* New: Result Count */
+        #result-count { font-size: 1em; font-weight: bold; color: #555; margin-top: 10px; }
+
+        #records-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        #records-table th, #records-table td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        #records-table th { background-color: #007bff; color: white; cursor: pointer; }
+        #records-table tr:nth-child(even) { background-color: #f9f9f9; }
+        #records-table tr:hover { background-color: #e9f7ff; cursor: pointer; }
+
+        /* Detail Panel Styles */
+        .record-detail h2 { color: #007bff; border-bottom: 2px solid #ccc; padding-bottom: 5px; margin-top: 15px; }
+        .record-detail h3 { color: #333; margin-top: 10px; font-size: 1.1em; }
+        .record-detail p { margin: 5px 0; padding-left: 15px; }
+        .member-block, .child-block { border: 1px solid #eee; padding: 15px; margin-bottom: 15px; border-radius: 4px; background-color: #fcfcfc; }
+        
+        /* Action Buttons */
+        .action-buttons { margin-top: 20px; display: flex; gap: 10px; }
+        .action-buttons button, .add-new-btn { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+
+        .print-btn { background-color: #28a745; color: white; }
+        .edit-btn { background-color: #ffc107; color: #333; }
+        .delete-btn { background-color: #dc3545; color: white; }
+        .add-new-btn { background-color: #007bff; color: white; }
+        
+        /* Print Styles to isolate the detail panel */
+        @media print {
+            body * { visibility: hidden; }
+            .container, #detail-panel, #detail-panel * { visibility: visible; }
+            #detail-panel { 
+                position: absolute; 
+                left: 0; 
+                top: 0; 
+                width: 100% !important; 
+                flex: none !important;
+                border: none !important; 
+                padding: 0 20px !important;
+                box-shadow: none !important;
+                overflow: visible !important;
+            }
+            .action-buttons { display: none !important; }
+            #main-content { display: block !important; }
+            #records-list-container, #summary-dashboard, #search-container, h1 { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- New 'Add New Record' button -->
+        <h1>
+            Church Administrators Dashboard 📊
+            <button class="add-new-btn" onclick="window.location.href='index.html';">➕ Add New Record</button>
+        </h1>
+        <div id="status-message" style="color:red; margin-bottom: 15px;">Loading data...</div>
+
+        <!-- Summary Statistics -->
+        <div id="summary-dashboard">
+            <div class="summary-box">
+                <h3>Total Households</h3>
+                <p id="total-households">0</p>
+            </div>
+            <div class="summary-box">
+                <h3>Total Members</h3>
+                <p id="total-members">0</p>
+            </div>
+            <div class="summary-box">
+                <h3>Total Children</h3>
+                <p id="total-children">0</p>
+            </div>
+        </div>
+
+        <!-- Search and Filter Controls -->
+        <div id="search-container">
+            <h2>Records Search & Filter</h2>
+            <input type="text" id="search-input" placeholder="Search by First Name, Last Name, Block, or Address">
+            <select id="column-filter">
+                <option value="">Filter by All Columns (Advanced)</option>
+            </select>
+            <input type="text" id="filter-input" placeholder="Value to search in selected column" disabled>
+            <button onclick="applySearchFilter()">Apply Filter</button>
+            <button onclick="resetFilters()">Reset</button>
+            <!-- New: Result Count -->
+            <div id="result-count">Showing 0 of 0 records.</div>
+        </div>
+
+        <div id="main-content">
+            <!-- Records Table (Left Column) -->
+            <div id="records-list-container">
+                <table id="records-table">
+                    <thead>
+                        <tr>
+                            <th data-column="Household_ID">Household ID</th>
+                            <th data-column="Block_Name">Block Name</th>
+                            <th data-column="Residential_Address">Address</th>
+                            <th data-column="Contact_No">Contact No</th>
+                            <th># Members</th>
+                            <th># Children</th>
+                        </tr>
+                    </thead>
+                    <tbody id="records-tbody">
+                        <!-- Data will be inserted here -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Detail Panel (Right Column) -->
+            <div id="detail-panel">
+                <div id="detail-content">
+                    <h2>Select a Record to View Details</h2>
+                    <p>Click on any row in the table to display the full household, member, and child data here. This view is printable.</p>
+                </div>
+                <!-- Action Buttons added here -->
+                <div class="action-buttons">
+                    <button class="print-btn" onclick="window.print()" style="display:none;">🖨️ Print Record</button>
+                    <button class="edit-btn" id="edit-record-btn" style="display:none;">✏️ Edit Record</button>
+                    <button class="delete-btn" id="delete-record-btn" style="display:none;">🗑️ Delete Record</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="admin.js"></script>
+</body>
+</html>
