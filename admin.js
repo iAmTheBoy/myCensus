@@ -1,56 +1,17 @@
 // 🚨 REPLACE THIS WITH YOUR GOOGLE APPS SCRIPT WEB APP URL 🚨
-const API_BASE_URL = 'https://script.google.com/macros/s/AKfycby7cY1176Uv4l80uLIn4NGj4bjTmWf-1Buai7shFqkzRctFEJlQ-8wEuR3Kk0uuNoLl/exec'; 
+const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbyVsLsF1YF8ahZ0pj2d8WJ24pSRfLgnRzZSrUzEoU9OufFKiMRmKthaXZVwI1aX6meC/exec'; 
 
 let ALL_RECORDS = []; 
 let DISPLAYED_RECORDS = []; 
-let ACTIVE_ROW = null; 
+let ACTIVE_ROW_ID = null; // Stores the Household_ID of the currently selected record
 
 document.addEventListener('DOMContentLoaded', async () => {
-    document.getElementById('loading-status').style.display = 'block';
-    try {
-        await fetchSummary();
-        await fetchRecords();
-        setupEventListeners();
-    } catch (error) {
-        console.error("Initialization Error:", error);
-        document.getElementById('loading-status').textContent = 'Error loading data. Check console.';
-        document.getElementById('loading-status').style.color = '#dc3545';
-    } finally {
-        document.getElementById('loading-status').style.display = 'none';
-    }
+    // We can rely solely on fetchRecords now that Apps Script is unified
+    await fetchRecords();
+    setupEventListeners();
 });
 
-/**
- * NEW FEATURE: Extracts unique block names and populates the Block filter dropdown.
- */
-function populateBlockFilter() {
-    const blockFilter = document.getElementById('block-filter');
-    const uniqueBlocks = new Set();
-    
-    // Collect all unique Block_Name values
-    ALL_RECORDS.forEach(record => {
-        if (record.Household && record.Household.Block_Name) {
-            uniqueBlocks.add(record.Household.Block_Name);
-        }
-    });
-
-    // Clear existing options (except the default "All Blocks")
-    while (blockFilter.options.length > 1) {
-        blockFilter.remove(1);
-    }
-    
-    // Add unique blocks as new options
-    Array.from(uniqueBlocks).sort().forEach(block => {
-        const option = document.createElement('option');
-        option.value = block;
-        option.textContent = block;
-        blockFilter.appendChild(option);
-    });
-}
-
-
 function setupEventListeners() {
-    const searchInput = document.getElementById('search-input');
     const columnFilter = document.getElementById('column-filter');
     const filterInput = document.getElementById('filter-input');
     
@@ -62,13 +23,178 @@ function setupEventListeners() {
         applySearchFilter(); 
     });
     
-    searchInput.addEventListener('input', applySearchFilter);
+    // Global search input listener is already handled in HTML via oninput="applySearchFilter()"
 
     // Event Delegation on the Table Body
     document.getElementById('records-tbody').addEventListener('click', handleRecordClick);
 
+    // Feature 2: Edit Button Listener
+    document.getElementById('edit-record-btn').addEventListener('click', handleEditClick);
+    
+    // Feature 3: Delete Button Listener
+    document.getElementById('delete-record-btn').addEventListener('click', handleDeleteClick);
+
     populateFilterColumns();
-    populateBlockFilter(); // <-- NEW CALL
+}
+
+/**
+ * Utility function to handle API calls with fetch.
+ */
+async function apiFetch(url, options = {}) {
+    const defaultOptions = {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        mode: 'no-cors' // Use 'no-cors' for Apps Script
+    };
+
+    const finalOptions = { ...defaultOptions, ...options };
+    
+    // If the method is not GET, we need to manually set the data property 
+    // for Apps Script to properly parse the payload.
+    if (finalOptions.method !== 'GET' && finalOptions.body) {
+        finalOptions.body = JSON.stringify(finalOptions.body);
+    }
+
+    try {
+        const response = await fetch(url, finalOptions);
+        
+        // Since Apps Script uses 'no-cors', we can only check for success by attempting to read response text.
+        // We will assume success if no network error occurred.
+        return true; 
+        
+    } catch (error) {
+        console.error('API Fetch Error:', error);
+        alert(`Failed to communicate with the backend. Details: ${error.message}`);
+        return false;
+    }
+}
+
+
+/**
+ * Fetches all structured records from the Apps Script backend.
+ */
+async function fetchRecords() {
+    const tbody = document.getElementById('records-tbody');
+    tbody.innerHTML = '<tr id="loading-message"><td colspan="6">Loading records, please wait...</td></tr>';
+    document.getElementById('detail-panel').style.display = 'none';
+
+    try {
+        const response = await fetch(`${API_BASE_URL}?mode=all`);
+        // The response from Apps Script is complex due to 'no-cors'. 
+        // We need a better way to check the content if possible, but for simplicity, 
+        // we'll rely on the server returning JSON content on success.
+        
+        const text = await response.text();
+        ALL_RECORDS = JSON.parse(text);
+        
+        DISPLAYED_RECORDS = [...ALL_RECORDS]; // Initialize displayed records
+        renderTable(DISPLAYED_RECORDS);
+        
+    } catch (error) {
+        console.error('Error fetching records:', error);
+        tbody.innerHTML = '<tr id="error-message"><td colspan="6">❌ Could not load data. Ensure your API_BASE_URL is correct and the Apps Script is deployed.</td></tr>';
+    }
+}
+
+/**
+ * Renders the table with the given array of records.
+ * * @param {Array<Object>} records The array of structured records to display.
+ */
+function renderTable(records) {
+    const tbody = document.getElementById('records-tbody');
+    tbody.innerHTML = '';
+    
+    // Feature 1: Show total number of search results
+    document.getElementById('results-info').textContent = `Total Records: ${records.length} / ${ALL_RECORDS.length}`;
+
+    if (records.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6">No records found matching your filter criteria.</td></tr>';
+        return;
+    }
+
+    records.forEach(record => {
+        const household = record.Household;
+        const row = document.createElement('tr');
+        row.dataset.householdId = household.Household_ID;
+        if (household.Household_ID === ACTIVE_ROW_ID) {
+             row.classList.add('active-row');
+        }
+
+        row.innerHTML = `
+            <td>${household.Household_ID}</td>
+            <td>${household.Block_Name || 'N/A'}</td>
+            <td>${household.Residential_Address || 'N/A'}</td>
+            <td>${household.Contact_No || 'N/A'}</td>
+            <td>${record.Members.length}</td>
+            <td>${record.Children.length}</td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+/**
+ * Populates the column filter dropdown based on the table headers.
+ */
+function populateFilterColumns() {
+    const columnFilter = document.getElementById('column-filter');
+    const headers = document.querySelectorAll('#records-table th[data-column]');
+    
+    columnFilter.innerHTML = '<option value="">All Columns (Global Search)</option>';
+
+    headers.forEach(header => {
+        const columnKey = header.dataset.column;
+        const columnName = header.textContent;
+        const option = document.createElement('option');
+        option.value = columnKey;
+        option.textContent = columnName;
+        columnFilter.appendChild(option);
+    });
+}
+
+/**
+ * Applies global search or column-specific filter.
+ */
+function applySearchFilter() {
+    const searchInput = document.getElementById('search-input').value.toLowerCase();
+    const columnKey = document.getElementById('column-filter').value;
+    const filterValue = document.getElementById('filter-input').value.toLowerCase();
+
+    DISPLAYED_RECORDS = ALL_RECORDS.filter(record => {
+        const household = record.Household;
+
+        // 1. Global Search
+        if (searchInput.length > 0) {
+            const globalMatch = Object.values(household).some(value => 
+                String(value).toLowerCase().includes(searchInput)
+            );
+            if (!globalMatch) return false;
+        }
+
+        // 2. Column-Specific Filter
+        if (columnKey && filterValue.length > 0) {
+            const recordValue = String(household[columnKey] || '').toLowerCase();
+            if (!recordValue.includes(filterValue)) {
+                return false;
+            }
+        }
+
+        return true;
+    });
+
+    renderTable(DISPLAYED_RECORDS);
+}
+
+/**
+ * Resets all filters and re-renders the table.
+ */
+function resetFilters() {
+    document.getElementById('search-input').value = '';
+    document.getElementById('column-filter').value = '';
+    document.getElementById('filter-input').value = '';
+    document.getElementById('filter-input').disabled = true;
+    applySearchFilter();
 }
 
 /**
@@ -78,217 +204,44 @@ function handleRecordClick(event) {
     const clickedRow = event.target.closest('tr');
 
     if (clickedRow && clickedRow.dataset.householdId) {
-        // Remove active class from previous active row
-        if (ACTIVE_ROW) {
-            ACTIVE_ROW.classList.remove('active-row');
-        }
-        
-        // Set new active row
-        ACTIVE_ROW = clickedRow;
-        ACTIVE_ROW.classList.add('active-row');
-        
         const householdId = clickedRow.dataset.householdId;
-        const record = DISPLAYED_RECORDS.find(r => r.Household.Household_ID === householdId);
-        
-        if (record) {
-            showDetailPanel(record);
+
+        // Find the full record object
+        const record = ALL_RECORDS.find(r => r.Household.Household_ID === householdId);
+
+        // Update active row visual state
+        if (ACTIVE_ROW_ID) {
+            const previousRow = document.querySelector(`tr[data-household-id="${ACTIVE_ROW_ID}"]`);
+            if (previousRow) previousRow.classList.remove('active-row');
         }
+        clickedRow.classList.add('active-row');
+        ACTIVE_ROW_ID = householdId;
+        
+        displayRecordDetails(record);
     }
 }
 
 /**
- * Fetches and displays summary data (counts).
+ * Displays the full details of the selected record in the detail panel.
  */
-async function fetchSummary() {
-    const url = `${API_BASE_URL}?action=getSummary`;
-    const response = await fetch(url);
-    const data = await response.json();
+function displayRecordDetails(record) {
+    const detailContent = document.getElementById('detail-content');
+    const detailPanel = document.getElementById('detail-panel');
+    const detailActions = document.querySelector('.detail-actions');
 
-    if (data.error) {
-        throw new Error(data.error);
-    }
-
-    document.getElementById('total-households').textContent = data.totalHouseholds || 0;
-    document.getElementById('total-members').textContent = data.totalMembers || 0;
-    document.getElementById('total-children').textContent = data.totalChildren || 0;
-}
-
-/**
- * Fetches all structured records.
- */
-async function fetchRecords() {
-    const url = `${API_BASE_URL}?action=getRecords`;
-    const response = await fetch(url);
-    const data = await response.json();
-    
-    if (data.error) {
-        throw new Error(data.error);
-    }
-    
-    ALL_RECORDS = data;
-    DISPLAYED_RECORDS = [...ALL_RECORDS]; // Initialize displayed records
-    renderRecords(DISPLAYED_RECORDS);
-}
-
-/**
- * Renders the table rows based on the current DISPLAYED_RECORDS.
- */
-function renderRecords(records) {
-    const tbody = document.getElementById('records-tbody');
-    tbody.innerHTML = '';
-    
-    if (records.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No records found matching the current filters.</td></tr>';
+    if (!record) {
+        detailContent.innerHTML = '<h2>Error</h2><p>Record data not found.</p>';
+        detailActions.style.display = 'none';
+        detailPanel.style.display = 'block';
         return;
     }
 
-    records.forEach(record => {
-        const row = tbody.insertRow();
-        row.dataset.householdId = record.Household.Household_ID;
-        
-        row.insertCell().textContent = record.Household.Household_ID;
-        row.insertCell().textContent = record.Household.Block_Name || 'N/A';
-        row.insertCell().textContent = record.Household.Residential_Address || 'N/A';
-        row.insertCell().textContent = record.Household.Contact_No || 'N/A';
-        row.insertCell().textContent = record.Members.length;
-        row.insertCell().textContent = record.Children.length;
-    });
-}
-
-/**
- * Overridden: Applies all current filters (Block filter, General search, Column filter).
- */
-function applySearchFilter() {
-    const generalSearchQuery = document.getElementById('search-input').value.toLowerCase();
-    const columnKey = document.getElementById('column-filter').value;
-    const columnSearchQuery = document.getElementById('filter-input').value.toLowerCase();
-    const blockFilterValue = document.getElementById('block-filter').value; // <-- NEW: Get block filter value
-
-    DISPLAYED_RECORDS = ALL_RECORDS.filter(record => {
-        // 1. Block Filter (NEW LOGIC)
-        if (blockFilterValue && record.Household.Block_Name !== blockFilterValue) {
-            return false;
-        }
-
-        // 2. General Search (EXISTING LOGIC)
-        if (generalSearchQuery) {
-            const searchTargets = [
-                record.Household.Block_Name,
-                record.Household.Residential_Address,
-                record.Household.Contact_No
-            ].join(' ').toLowerCase();
-
-            // Include searching through all member names
-            const memberNames = record.Members.map(m => 
-                `${m.First_Name || ''} ${m.Last_Name || ''}`
-            ).join(' ').toLowerCase();
-
-            if (!searchTargets.includes(generalSearchQuery) && !memberNames.includes(generalSearchQuery)) {
-                return false;
-            }
-        }
-
-        // 3. Column Filter (EXISTING LOGIC)
-        if (columnKey && columnSearchQuery) {
-            let foundMatch = false;
-
-            // Check Household data
-            if (record.Household[columnKey] && String(record.Household[columnKey]).toLowerCase().includes(columnSearchQuery)) {
-                foundMatch = true;
-            }
-
-            // Check Member data
-            if (!foundMatch) {
-                for (const member of record.Members) {
-                    if (member[columnKey] && String(member[columnKey]).toLowerCase().includes(columnSearchQuery)) {
-                        foundMatch = true;
-                        break;
-                    }
-                }
-            }
-            
-            // Check Children data
-            if (!foundMatch) {
-                for (const child of record.Children) {
-                    if (child[columnKey] && String(child[columnKey]).toLowerCase().includes(columnSearchQuery)) {
-                        foundMatch = true;
-                        break;
-                    }
-                }
-            }
-
-            if (!foundMatch) {
-                return false;
-            }
-        }
-        
-        return true;
-    });
-
-    renderRecords(DISPLAYED_RECORDS);
-    // Clear detail panel when filters change
-    const detailPanel = document.getElementById('detail-panel');
-    document.getElementById('detail-content').innerHTML = '<h2>Select a Record to View Details</h2><p>Click on any row in the table to display the full household, member, and child data here. This view is printable.</p>';
-    detailPanel.style.display = 'none';
-}
-
-
-function resetFilters() {
-    document.getElementById('search-input').value = '';
-    document.getElementById('column-filter').value = '';
-    document.getElementById('filter-input').value = '';
-    document.getElementById('filter-input').disabled = true;
-    document.getElementById('filter-input').placeholder = 'Value to search in selected column';
-    document.getElementById('block-filter').value = ''; // Reset Block Filter
-    applySearchFilter();
-}
-
-
-function populateFilterColumns() {
-    const columnFilter = document.getElementById('column-filter');
-    const columns = [
-        'Block_Name', 'Residential_Address', 'Contact_No', 
-        'First_Name', 'Last_Name', 'Date_of_birth', 'Catholic_YN', 
-        'Marital_Status', 'Occupation', 'Unemployed_YN', 'Pensioner_YN', 
-        'Church_Activities', 'Leadership_Role', 'Age'
-    ];
+    let html = '<h2>Household Record: ' + record.Household.Household_ID + '</h2>';
     
-    columns.forEach(col => {
-        const option = document.createElement('option');
-        option.value = col;
-        option.textContent = col.replace(/_/g, ' ');
-        columnFilter.appendChild(option);
-    });
-}
-
-function formatKey(key) {
-    return key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-}
-
-function formatValue(value) {
-    if (typeof value === 'boolean') {
-        return value ? 'Yes' : 'No';
-    }
-    if (value instanceof Date && !isNaN(value)) {
-        return value.toLocaleDateString();
-    }
-    return value || 'N/A';
-}
-
-function formatPair(key, value) {
-    return `<div class="detail-pair"><span class="detail-key">${formatKey(key)}:</span><span class="detail-value">${formatValue(value)}</span></div>`;
-}
-
-function showDetailPanel(record) {
-    const detailPanel = document.getElementById('detail-panel');
-    const detailContent = document.getElementById('detail-content');
-    
-    let html = '';
-
     // 1. Household Section
-    html += '<h2>Household Record: ' + record.Household.Household_ID + '</h2>';
     html += '<h3>General Information</h3>';
     for (const key in record.Household) {
+        // Exclude internal fields
         if (key !== 'Household_ID' && key !== 'Timestamp') { 
             html += formatPair(key, record.Household[key]);
         }
@@ -299,6 +252,7 @@ function showDetailPanel(record) {
     record.Members.forEach((member, index) => {
         html += `<div class="member-block"><h3 style="margin-top:0;">Member ${index + 1}: ${member.First_Name || ''} ${member.Last_Name || ''}</h3>`;
         for (const key in member) {
+            // Exclude internal fields
             if (key !== 'Household_ID' && key !== 'Member_ID' && key !== 'Timestamp') {
                 html += formatPair(key, member[key]);
             }
@@ -311,16 +265,98 @@ function showDetailPanel(record) {
     record.Children.forEach((child, index) => {
         html += `<div class="child-block"><h3 style="margin-top:0;">Child ${index + 1}: ${child.First_Name || ''} ${child.Last_Name || ''} (Age: ${child.Age || 'N/A'})</h3>`;
         for (const key in child) {
+            // Exclude internal fields
             if (key !== 'Household_ID' && key !== 'Child_ID' && key !== 'Timestamp') {
                 html += formatPair(key, child[key]);
             }
         }
         html += '</div>';
     });
-    
+
     detailContent.innerHTML = html;
-    detailPanel.style.display = 'block';
     
-    // Show print button
-    document.querySelector('.print-btn').style.display = 'block';
+    // Feature 2/3: Show action buttons and set the ID
+    detailActions.style.display = 'block';
+    document.getElementById('edit-record-btn').dataset.householdId = record.Household.Household_ID;
+    document.getElementById('delete-record-btn').dataset.householdId = record.Household.Household_ID;
+
+    detailPanel.style.display = 'block';
+}
+
+/**
+ * Helper function to format key-value pairs for the detail panel.
+ */
+function formatPair(key, value) {
+    if (!value) return ''; // Skip empty values
+    // Convert Snake_Case to Title Case for display
+    const formattedKey = key.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+    return `<div class="detail-row"><span class="detail-label">${formattedKey}:</span><span class="detail-value">${value}</span></div>`;
+}
+
+// =======================================================
+// NEW FEATURE HANDLERS
+// =======================================================
+
+/**
+ * Feature 2: Handles the click on the Edit button.
+ * Redirects to index.html with the Household_ID as a query parameter.
+ */
+function handleEditClick(event) {
+    const householdId = event.target.dataset.householdId;
+    if (householdId) {
+        // Redirect to index.html and pass the ID as a URL parameter
+        window.location.href = `index.html?id=${householdId}`;
+    } else {
+        alert('Error: No Household ID found for editing.');
+    }
+}
+
+/**
+ * Feature 3: Handles the click on the Delete button.
+ */
+async function handleDeleteClick(event) {
+    const householdId = event.target.dataset.householdId;
+
+    if (!householdId) {
+        alert('Error: No Household ID found for deletion.');
+        return;
+    }
+
+    // IMPORTANT: Custom modal for confirmation (since alert() is blocked)
+    if (!confirm(`Are you SURE you want to permanently delete record ${householdId} and ALL related members/children? This action cannot be undone.`)) {
+        return;
+    }
+
+    // Visual feedback
+    const deleteButton = event.target;
+    deleteButton.disabled = true;
+    deleteButton.textContent = 'Deleting...';
+
+    // Send DELETE request (Apps Script handles DELETE by reading POST data content)
+    const success = await apiFetch(API_BASE_URL, {
+        method: 'POST', // Must use POST for Apps Script, but send a 'delete' signal
+        body: { 
+            Household_ID: householdId,
+            action: 'DELETE' // Custom field for Apps Script to route the request (though Apps Script uses doDelete)
+        }
+    });
+
+    if (success) {
+        // 1. Remove the record from ALL_RECORDS
+        ALL_RECORDS = ALL_RECORDS.filter(r => r.Household.Household_ID !== householdId);
+        
+        // 2. Clear detail panel and active state
+        document.getElementById('detail-panel').style.display = 'none';
+        document.getElementById('detail-content').innerHTML = '<h2>Record Deleted</h2><p>The household record has been successfully removed.</p>';
+        ACTIVE_ROW_ID = null;
+
+        // 3. Update the dashboard immediately
+        applySearchFilter(); // Re-run filter and re-render table with updated ALL_RECORDS size
+        alert(`✅ Record ${householdId} deleted successfully.`);
+    } else {
+        alert(`❌ Deletion of record ${householdId} failed.`);
+    }
+
+    deleteButton.disabled = false;
+    deleteButton.textContent = '🗑️ Delete Record';
 }
