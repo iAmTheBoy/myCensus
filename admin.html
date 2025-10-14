@@ -7,119 +7,84 @@
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f9; color: #333; }
         .container { max-width: 1400px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 15px rgba(0, 0, 0, 0.1); }
-        h1 { color: #007bff; border-bottom: 3px solid #007bff; padding-bottom: 10px; }
+        h1 { color: #007bff; border-bottom: 3px solid #007bff; padding-bottom: 10px; display: inline-block; margin-right: 20px; }
+        
+        /* New Buttons and Info */
+        #top-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .action-button { background-color: #28a745; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; transition: background-color 0.3s; margin-left: 10px; }
+        .action-button:hover { background-color: #218838; }
+        #results-info { font-weight: bold; color: #666; }
+
+        /* Filtering/Search */
+        #filter-controls { display: flex; gap: 10px; margin-bottom: 20px; padding: 10px; border: 1px solid #ddd; border-radius: 6px; background-color: #fff; }
+        #filter-controls select, #filter-controls input, #filter-controls button { padding: 8px; border-radius: 4px; border: 1px solid #ccc; }
+        #filter-controls button { background-color: #007bff; color: white; cursor: pointer; }
+        #filter-controls button:hover { background-color: #0056b3; }
         
         /* Layout for Table and Detail Panel */
         #main-content { display: flex; gap: 20px; }
-        #records-list-container { flex: 2; /* Takes up 60-70% width */ }
+        #records-list-container { flex: 2; overflow-x: auto; }
         #detail-panel { 
-            flex: 1; /* Takes up 30-40% width */
+            flex: 1;
             background-color: #f8f9fa;
             border: 1px solid #ddd;
             border-radius: 6px;
             padding: 20px;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
             display: none; /* Hidden by default */
-            position: sticky;
-            top: 20px;
-            max-height: calc(100vh - 40px);
-            overflow-y: auto;
+            min-width: 350px;
         }
-
-        /* Summary Boxes */
-        #summary-cards { display: flex; justify-content: space-around; margin-bottom: 20px; }
-        .card { padding: 15px; border-radius: 6px; text-align: center; flex: 1; margin: 0 10px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
-        .card h2 { margin-top: 0; font-size: 1.5em; color: #333; }
-        .card p { font-size: 2em; margin: 5px 0 0; font-weight: bold; color: #007bff; }
-
-        /* Search & Filter Styles */
-        #search-controls { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
-        #search-controls input, #search-controls select, #block-filter-container select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-        #column-search { display: flex; gap: 10px; }
+        #detail-panel button { margin-right: 10px; margin-top: 10px; }
+        .detail-actions { border-top: 1px solid #ddd; padding-top: 10px; margin-top: 15px; }
+        .edit-btn { background-color: #ffc107; color: #333; }
+        .edit-btn:hover { background-color: #e0a800; }
+        .delete-btn { background-color: #dc3545; color: white; }
+        .delete-btn:hover { background-color: #c82333; }
+        .print-btn { background-color: #6c757d; color: white; }
+        .print-btn:hover { background-color: #5a6268; }
 
         /* Table Styles */
         #records-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         #records-table th, #records-table td { border: 1px solid #ddd; padding: 10px; text-align: left; }
-        #records-table th { background-color: #007bff; color: white; cursor: pointer; }
-        #records-table tr:hover { background-color: #e9f0ff; }
-        #records-table tbody tr { cursor: pointer; }
-        .active-row { background-color: #cce5ff !important; font-weight: bold; }
+        #records-table th { background-color: #e9ecef; cursor: pointer; }
+        #records-table tbody tr:hover { background-color: #f1f1f1; cursor: pointer; }
+        #records-table tbody tr.active-row { background-color: #cfe2ff; font-weight: bold; }
 
-        /* Detail Panel Styles */
-        #detail-content h2, #detail-content h3 { border-bottom: 1px solid #ccc; padding-bottom: 5px; margin-top: 15px; }
-        .detail-pair { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px dotted #eee; }
-        .detail-key { font-weight: bold; }
-        .detail-value { text-align: right; }
-        .member-block, .child-block { border: 1px solid #cce5ff; padding: 10px; margin-top: 10px; border-radius: 4px; background-color: #fff; }
-        .print-btn { background-color: #6c757d; color: white; margin-top: 15px; display: block !important; width: 100%; }
-        .print-btn:hover { background-color: #5a6268; }
+        /* Detail Content Styles */
+        .member-block, .child-block { border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; border-radius: 4px; background-color: #fff; }
+        .detail-row { display: flex; margin-bottom: 5px; }
+        .detail-label { font-weight: bold; width: 180px; color: #555; font-size: 0.9em; }
+        .detail-value { flex-grow: 1; font-size: 0.9em; }
 
-        /* Print Styles */
-        @media print {
-            body { margin: 0; padding: 0; background: white; }
-            .container, h1, #summary-cards, #search-controls, #block-filter-container { display: none; }
-            #main-content { display: block; margin: 0; }
-            #records-list-container { display: none; }
-            #detail-panel { 
-                display: block !important; 
-                flex: none; 
-                width: 100%; 
-                max-width: none; 
-                position: relative; 
-                top: auto; 
-                overflow-y: visible;
-                padding: 10px;
-                border: none;
-                box-shadow: none;
-                background-color: white;
-            }
-            .print-btn { display: none !important; }
+        /* Loading */
+        #loading-message { text-align: center; padding: 20px; font-size: 1.2em; color: #007bff; }
+
+        @media (max-width: 1000px) {
+            #main-content { flex-direction: column; }
+            #detail-panel { min-width: auto; }
+            #filter-controls { flex-wrap: wrap; }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Our Lady of Fatima Shrine Census Admin Dashboard</h1>
-        
-        <div id="summary-cards">
-            <div class="card">
-                <h2>Total Households</h2>
-                <p id="total-households">...</p>
-            </div>
-            <div class="card">
-                <h2>Total Members</h2>
-                <p id="total-members">...</p>
-            </div>
-            <div class="card">
-                <h2>Total Children</h2>
-                <p id="total-children">...</p>
+        <div id="top-controls">
+            <h1>Church Census Administration</h1>
+            <div>
+                <span id="results-info">Total Records: 0</span>
+                <!-- Feature 4: Add New Record Button -->
+                <button id="add-new-record-btn" class="action-button" onclick="window.location.href='index.html'">➕ Add New Record</button>
             </div>
         </div>
 
-        <div id="loading-status" style="text-align: center; margin-bottom: 10px; color: #ffc107;">Loading data...</div>
-        
-        <div id="block-filter-container" style="margin-bottom: 15px; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
-            <h3>Filter by Block/Area</h3>
-            <label for="block-filter">Select Block:</label>
-            <select id="block-filter" onchange="applySearchFilter()">
-                <option value="">-- All Blocks --</option>
-                </select>
-        </div>
-        <div id="search-controls">
-            <h3>Search & Filter</h3>
-            <input type="text" id="search-input" placeholder="Search by Name, Block, or Address..." style="width: 100%;">
-            
-            <div id="column-search">
-                <select id="column-filter">
-                    <option value="">-- Select Column to Filter --</option>
-                    </select>
-                <input type="text" id="filter-input" placeholder="Value to search in selected column" disabled>
-            </div>
-
-            <div style="display: flex; gap: 10px;">
-                <button onclick="applySearchFilter()">Apply Filter</button>
-                <button onclick="resetFilters()">Reset</button>
-            </div>
+        <div id="filter-controls">
+            <input type="text" id="search-input" placeholder="Global search..." oninput="applySearchFilter()">
+            <select id="column-filter">
+                <!-- Populated by JS -->
+            </select>
+            <input type="text" id="filter-input" placeholder="Value to search in selected column" disabled>
+            <button onclick="applySearchFilter()">Apply Filter</button>
+            <button onclick="resetFilters()">Reset</button>
         </div>
 
         <div id="main-content">
@@ -136,7 +101,8 @@
                         </tr>
                     </thead>
                     <tbody id="records-tbody">
-                        </tbody>
+                        <tr id="loading-message"><td colspan="6">Loading records, please wait...</td></tr>
+                    </tbody>
                 </table>
             </div>
 
@@ -145,7 +111,13 @@
                     <h2>Select a Record to View Details</h2>
                     <p>Click on any row in the table to display the full household, member, and child data here. This view is printable.</p>
                 </div>
-                <button class="print-btn" onclick="window.print()" style="display:none;">🖨️ Print Record</button>
+                <div class="detail-actions" style="display:none;">
+                    <!-- Feature 2: Edit Button (data-household-id populated by JS) -->
+                    <button class="edit-btn" id="edit-record-btn">✏️ Edit Record</button>
+                    <!-- Feature 3: Delete Button (data-household-id populated by JS) -->
+                    <button class="delete-btn" id="delete-record-btn">🗑️ Delete Record</button>
+                    <button class="print-btn" onclick="window.print()">🖨️ Print Record</button>
+                </div>
             </div>
         </div>
     </div>
