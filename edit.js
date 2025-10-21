@@ -1,5 +1,5 @@
 // 🚨 REPLACE THIS WITH YOUR GOOGLE APPS SCRIPT WEB APP URL 🚨
-const API_ENDPOINT = 'https://script.google.com/macros/s/AKfycbyzpmV3d2etqNpujAQUWcrRfs-hPcBjB20mru-64Pdf10kWv-3W3lwWf1Ya0S_Mj91-/exec';
+const API_ENDPOINT = 'https://script.google.com/macros/s/AKfycbyGUp-al-UUrFIPf6Btk0Mb7Cv8x-7DPHn67JR8SAuEbYaM0jriPix62GeahktSs67b/exec';
 
 let CURRENT_HOUSEHOLD_ID = null;
 
