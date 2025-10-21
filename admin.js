@@ -1,5 +1,5 @@
 // admin.js
-const API_BASE_URL = 'https://script.google.com/macros/s/YOUR_DEPLOYED_SCRIPT_ID/exec'; // <-- REPLACE
+const API_BASE_URL = 'https://script.google.com/macros/s/AKfycby0PAQY_gVpd3iIqOYLLqRgNobtpEW1oWohnJLLlk2KJF780ER4-KCIf0HWlwBoIe4n/exec'; // <-- REPLACE
 
 let ALL_RECORDS = [];
 let DISPLAYED_RECORDS = [];
@@ -163,3 +163,4 @@ function escapeHtml(str) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
 }
+
