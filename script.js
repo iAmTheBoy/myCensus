@@ -1,5 +1,5 @@
 // 🚨 REPLACE THIS WITH YOUR GOOGLE APPS SCRIPT WEB APP URL 🚨
-const API_ENDPOINT = 'https://script.google.com/macros/s/AKfycbyVsLsF1YF8ahZ0pj2d8WJ24pSRfLgnRzZSrUzEoU9OufFKiMRmKthaXZVwI1aX6meC/exec';
+const API_ENDPOINT = 'https://script.google.com/macros/s/AKfycby0PAQY_gVpd3iIqOYLLqRgNobtpEW1oWohnJLLlk2KJF780ER4-KCIf0HWlwBoIe4n/exec';
 
 let isEditMode = false;
 
@@ -389,3 +389,4 @@ function calculateAge(childBlock) {
 // Add the initial member when the script loads (for New Record mode only)
 // This is now handled in the DOMContentLoaded listener.
 // if (!isEditMode) { addMember(); }
+
