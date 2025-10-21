@@ -1,166 +1,310 @@
-// admin.js
-const API_BASE_URL = 'https://script.google.com/macros/s/AKfycby0PAQY_gVpd3iIqOYLLqRgNobtpEW1oWohnJLLlk2KJF780ER4-KCIf0HWlwBoIe4n/exec'; // <-- REPLACE
+// 🚨 REPLACE THIS WITH YOUR GOOGLE APPS SCRIPT WEB APP URL 🚨
+const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbyzpmV3d2etqNpujAQUWcrRfs-hPcBjB20mru-64Pdf10kWv-3W3lwWf1Ya0S_Mj91-/exec'; 
 
-let ALL_RECORDS = [];
-let DISPLAYED_RECORDS = [];
+let ALL_RECORDS = []; 
+let DISPLAYED_RECORDS = []; 
+let ACTIVE_ROW = null; 
 
-document.addEventListener('DOMContentLoaded', () => {
-  init();
+document.addEventListener('DOMContentLoaded', async () => {
+    await fetchSummary();
+    await fetchRecords();
+    setupEventListeners();
 });
 
-async function init() {
-  await fetchSummary();
-  await fetchRecords();
-  setupEventListeners();
-}
-
 function setupEventListeners() {
-  document.getElementById('search-btn').addEventListener('click', applySearchFilter);
-  document.getElementById('refresh-btn').addEventListener('click', fetchRecords);
-  document.getElementById('close-detail-btn').addEventListener('click', () => {
-    document.getElementById('detail-panel').style.display = 'none';
-  });
-  document.getElementById('print-btn').addEventListener('click', () => window.print());
+    const searchInput = document.getElementById('search-input');
+    const columnFilter = document.getElementById('column-filter');
+    const filterInput = document.getElementById('filter-input');
+    
+    columnFilter.addEventListener('change', () => {
+        filterInput.disabled = columnFilter.value === "";
+        filterInput.placeholder = columnFilter.value === "" ? 
+            "Value to search in selected column" : 
+            `Search value for ${columnFilter.options[columnFilter.selectedIndex].text}`;
+        applySearchFilter(); 
+    });
+    
+    searchInput.addEventListener('input', applySearchFilter);
 
-  // Edit button - handler assigned when showing detail
-  // Row click: delegate
-  document.getElementById('records-tbody').addEventListener('click', handleRecordRowClick);
+    // Event Delegation on the Table Body
+    document.getElementById('records-tbody').addEventListener('click', handleRecordClick);
+
+    // 🌟 NEW: Event listener for the Edit Button 🌟
+    document.getElementById('edit-record-btn').addEventListener('click', handleEditClick);
+
+    populateFilterColumns();
 }
+
+/**
+ * Handles clicks on the table body using delegation.
+ */
+function handleRecordClick(event) {
+    const clickedRow = event.target.closest('tr');
+
+    if (clickedRow && clickedRow.dataset.householdId) {
+        showDetailPanel(clickedRow.dataset.householdId, clickedRow);
+    }
+}
+
+/**
+ * 🌟 NEW: Handles the click on the Edit button, navigating to edit.html 🌟
+ */
+function handleEditClick(event) {
+    const editButton = event.target;
+    const householdId = editButton.dataset.householdId;
+    if (householdId) {
+        // Navigate to the new edit page, passing the Household_ID as a URL parameter
+        window.location.href = `edit.html?id=${householdId}`;
+    }
+}
+
+
+// === API FETCHING ===
 
 async function fetchSummary() {
-  try {
-    const res = await fetch(`${API_BASE_URL}?action=summary`);
-    const data = await res.json();
-    document.getElementById('household-count').textContent = data.households || 0;
-    document.getElementById('member-count').textContent = data.members || 0;
-    document.getElementById('child-count').textContent = data.children || 0;
-  } catch (err) {
-    console.error('fetchSummary error', err);
-  }
+    try {
+        const url = `${API_BASE_URL}?action=getSummary`;
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Network response was not ok');
+        const data = await response.json();
+        
+        if (data.result === 'success') {
+            document.getElementById('total-households').textContent = data.data.households;
+            document.getElementById('total-members').textContent = data.data.members;
+            document.getElementById('total-children').textContent = data.data.children;
+        } else {
+            document.getElementById('status-message').textContent = `Error fetching summary: ${data.message}`;
+        }
+    } catch (error) {
+        document.getElementById('status-message').textContent = `Failed to connect to API for summary. Check your API URL.`;
+    }
 }
 
 async function fetchRecords() {
-  try {
-    const res = await fetch(`${API_BASE_URL}?action=fetchRecords`);
-    const data = await res.json();
-    ALL_RECORDS = data || [];
-    DISPLAYED_RECORDS = [...ALL_RECORDS];
-    renderTable(DISPLAYED_RECORDS);
-  } catch (err) {
-    console.error('fetchRecords error', err);
-  }
+    document.getElementById('status-message').textContent = "Fetching all records...";
+    try {
+        const url = `${API_BASE_URL}?action=getRecords`;
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Network response was not ok');
+        const data = await response.json();
+        
+        if (data.result === 'success') {
+            ALL_RECORDS = data.data;
+            DISPLAYED_RECORDS = ALL_RECORDS;
+            renderRecords(ALL_RECORDS);
+            document.getElementById('status-message').style.display = 'none';
+        } else {
+            document.getElementById('status-message').textContent = `Error fetching records: ${data.message}`;
+        }
+    } catch (error) {
+        document.getElementById('status-message').textContent = `Failed to connect to API for records. Check your API URL.`;
+    }
 }
 
-function renderTable(records) {
-  const tbody = document.getElementById('records-tbody');
-  tbody.innerHTML = '';
-  records.forEach(record => {
-    const tr = document.createElement('tr');
-    tr.dataset.householdId = record.Household_ID;
-    tr.innerHTML = `
-      <td>${escapeHtml(record.Household_ID || '')}</td>
-      <td>${escapeHtml(record.Block_Name || '')}</td>
-      <td>${escapeHtml(record.Residential_Address || '')}</td>
-      <td>${escapeHtml(record.Contact_No || '')}</td>
-    `;
-    tbody.appendChild(tr);
-  });
-}
+// === DATA RENDERING AND FILTERING ===
+// (Logic unchanged for filtering/searching)
 
-function handleRecordRowClick(event) {
-  const tr = event.target.closest('tr');
-  if (!tr) return;
-  const householdId = tr.dataset.householdId;
-  const record = ALL_RECORDS.find(r => r.Household_ID === householdId);
-  if (!record) return;
-  showDetailPanel(record);
-}
+function populateFilterColumns() {
+    const allKeys = new Set();
+    
+    if (ALL_RECORDS.length > 0) {
+        const sample = ALL_RECORDS[0];
+        Object.keys(sample.Household).forEach(key => allKeys.add(key));
+        if (sample.Members.length > 0) {
+            Object.keys(sample.Members[0]).forEach(key => allKeys.add(key));
+        }
+        if (sample.Children.length > 0) {
+            Object.keys(sample.Children[0]).forEach(key => allKeys.add(key));
+        }
+    }
 
-function showDetailPanel(record) {
-  const panel = document.getElementById('detail-panel');
-  const content = document.getElementById('detail-content');
-  content.innerHTML = '';
-
-  const hh = document.createElement('div');
-  hh.innerHTML = `
-    <strong>ID:</strong> ${escapeHtml(record.Household_ID || '')}<br/>
-    <strong>Block:</strong> ${escapeHtml(record.Block_Name || '')}<br/>
-    <strong>Address:</strong> ${escapeHtml(record.Residential_Address || '')}<br/>
-    <strong>Contact:</strong> ${escapeHtml(record.Contact_No || '')}<br/>
-    <hr/>
-    <strong>Members</strong>
-  `;
-  content.appendChild(hh);
-
-  const membersList = document.createElement('div');
-  if (Array.isArray(record.members) && record.members.length) {
-    record.members.forEach(m => {
-      const mdiv = document.createElement('div');
-      // if members in backend are objects, adapt accordingly; here we assume object properties
-      if (typeof m === 'object') {
-        mdiv.textContent = `${m.Full_Name || ''} — ${m.Gender || ''} — ${m.DOB || ''}`;
-      } else {
-        // if members came as array of rows, join
-        mdiv.textContent = m.join(' | ');
-      }
-      membersList.appendChild(mdiv);
+    const select = document.getElementById('column-filter');
+    const sortedKeys = Array.from(allKeys).sort();
+    
+    sortedKeys.forEach(key => {
+        if (key.endsWith('_ID') || key === 'Timestamp' || key === 'Age') return; 
+        
+        const option = document.createElement('option');
+        option.value = key;
+        option.textContent = key.replace(/_/g, ' ');
+        select.appendChild(option);
     });
-  } else {
-    membersList.textContent = 'No members recorded';
-  }
-  content.appendChild(membersList);
-
-  const childrenHeader = document.createElement('div');
-  childrenHeader.innerHTML = '<hr/><strong>Children</strong>';
-  content.appendChild(childrenHeader);
-
-  const childrenList = document.createElement('div');
-  if (Array.isArray(record.children) && record.children.length) {
-    record.children.forEach(c => {
-      const cdiv = document.createElement('div');
-      if (typeof c === 'object') {
-        cdiv.textContent = `${c.Full_Name || ''} — ${c.DOB || ''} — Age: ${c.Age || ''}`;
-      } else {
-        cdiv.textContent = c.join(' | ');
-      }
-      childrenList.appendChild(cdiv);
-    });
-  } else {
-    childrenList.textContent = 'No children recorded';
-  }
-  content.appendChild(childrenList);
-
-  // Assign edit button action
-  document.getElementById('edit-btn').onclick = () => openEditPage(record.Household_ID);
-
-  panel.style.display = 'block';
-}
-
-function openEditPage(householdId) {
-  if (!householdId) {
-    alert('No Household ID selected for edit.');
-    return;
-  }
-  // Redirect to edit page with ID in query param
-  window.location.href = `edit.html?id=${encodeURIComponent(householdId)}`;
 }
 
 function applySearchFilter() {
-  const q = (document.getElementById('search-input').value || '').toLowerCase();
-  DISPLAYED_RECORDS = ALL_RECORDS.filter(r => {
-    return (r.Block_Name || '').toLowerCase().includes(q) ||
-           (r.Residential_Address || '').toLowerCase().includes(q) ||
-           (r.Contact_No || '').toLowerCase().includes(q) ||
-           (r.Household_ID || '').toLowerCase().includes(q);
-  });
-  renderTable(DISPLAYED_RECORDS);
+    const generalSearchTerm = document.getElementById('search-input').value.toLowerCase().trim();
+    const columnFilterKey = document.getElementById('column-filter').value;
+    const filterValue = document.getElementById('filter-input').value.toLowerCase().trim();
+
+    DISPLAYED_RECORDS = ALL_RECORDS.filter(record => {
+        let matchesGeneralSearch = false;
+        
+        if (generalSearchTerm) {
+            const household = record.Household;
+            
+            if (
+                (household.Block_Name && household.Block_Name.toString().toLowerCase().includes(generalSearchTerm)) ||
+                (household.Residential_Address && household.Residential_Address.toString().toLowerCase().includes(generalSearchTerm))
+            ) {
+                matchesGeneralSearch = true;
+            }
+
+            if (record.Members.some(m => 
+                (m.First_Name && m.First_Name.toString().toLowerCase().includes(generalSearchTerm)) || 
+                (m.Last_Name && m.Last_Name.toString().toLowerCase().includes(generalSearchTerm))
+            )) {
+                matchesGeneralSearch = true;
+            }
+            
+            if (record.Children.some(c => 
+                (c.First_Name && c.First_Name.toString().toLowerCase().includes(generalSearchTerm)) || 
+                (c.Last_Name && c.Last_Name.toString().toLowerCase().includes(generalSearchTerm))
+            )) {
+                matchesGeneralSearch = true;
+            }
+        } else {
+            matchesGeneralSearch = true;
+        }
+        
+        if (generalSearchTerm && !matchesGeneralSearch) {
+            return false;
+        }
+
+        let matchesColumnFilter = false;
+        if (columnFilterKey && filterValue) {
+            if (record.Household[columnFilterKey] && record.Household[columnFilterKey].toString().toLowerCase().includes(filterValue)) {
+                matchesColumnFilter = true;
+            }
+            if (record.Members.some(m => m[columnFilterKey] && m[columnFilterKey].toString().toLowerCase().includes(filterValue))) {
+                matchesColumnFilter = true;
+            }
+            if (record.Children.some(c => c[columnFilterKey] && c[columnFilterKey].toString().toLowerCase().includes(filterValue))) {
+                matchesColumnFilter = true;
+            }
+            
+            return matchesColumnFilter; 
+        } else {
+            return matchesGeneralSearch; 
+        }
+    });
+
+    renderRecords(DISPLAYED_RECORDS);
 }
 
-function escapeHtml(str) {
-  if (!str && str !== 0) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+function resetFilters() {
+    document.getElementById('search-input').value = '';
+    document.getElementById('column-filter').value = '';
+    document.getElementById('filter-input').value = '';
+    document.getElementById('filter-input').disabled = true;
+    applySearchFilter(); 
 }
 
+function renderRecords(records) {
+    const tbody = document.getElementById('records-tbody');
+    tbody.innerHTML = '';
+
+    if (records.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No records found matching your criteria.</td></tr>';
+        return;
+    }
+
+    records.forEach(record => {
+        const household = record.Household;
+        const row = tbody.insertRow();
+        row.dataset.householdId = household.Household_ID;
+        
+        row.insertCell().textContent = household.Household_ID;
+        row.insertCell().textContent = household.Block_Name;
+        row.insertCell().textContent = household.Residential_Address;
+        row.insertCell().textContent = household.Contact_No;
+        row.insertCell().textContent = record.Members.length;
+        row.insertCell().textContent = record.Children.length;
+    });
+}
+
+
+// === DETAIL PANEL VIEW (PRINT & FORMATTING FIXES) ===
+
+function showDetailPanel(householdId, clickedRow) {
+    const record = ALL_RECORDS.find(r => r.Household.Household_ID === householdId);
+    if (!record) return;
+
+    const detailContent = document.getElementById('detail-content');
+    const detailPanel = document.getElementById('detail-panel');
+    const printBtn = detailPanel.querySelector('.print-btn');
+    const editBtn = document.getElementById('edit-record-btn'); // 🌟 NEW: Get Edit Button 🌟
+    
+    // Highlight the clicked row
+    if (ACTIVE_ROW) {
+        ACTIVE_ROW.style.backgroundColor = '';
+    }
+    clickedRow.style.backgroundColor = '#d3eaff'; // Light blue highlight
+    ACTIVE_ROW = clickedRow;
+    
+    // 🌟 NEW: Set Household ID on Edit button for navigation 🌟
+    editBtn.dataset.householdId = householdId;
+
+    // 🌟 FIX: Enhanced Helper to format the key 🌟
+    const formatKeyForDisplay = (key) => {
+        // Handle YN (Yes/No) keys
+        if (key.endsWith('_YN')) {
+            key = key.slice(0, -3) + ' (Yes/No)';
+        }
+        // Specific replacements for clarity
+        if (key === 'First_Communion') return 'First Holy Communion';
+        if (key === 'Date_1st_Communion') return 'Date of First Communion';
+        if (key === 'Church_of_1st_Communion') return 'Church of First Communion';
+        if (key === 'Civil_Court_Marriage_Date') return 'Civil Marriage Date';
+
+
+        // Convert underscores to space and Title Case
+        return key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    };
+
+    // Helper to format a key-value pair
+    const formatPair = (key, value) => {
+        const formattedKey = formatKeyForDisplay(key);
+        const formattedValue = value instanceof Date ? value.toLocaleDateString() : (value || 'N/A');
+        return `<p><strong>${formattedKey}:</strong> ${formattedValue}</p>`;
+    };
+    
+    let html = '';
+
+    // 1. Household Section
+    html += '<h2 style="color: #007bff; margin-top: 0;">Household Record: ' + record.Household.Household_ID + '</h2>';
+    html += '<h3>General Information</h3>';
+    for (const key in record.Household) {
+        if (key !== 'Household_ID' && key !== 'Timestamp') { 
+            html += formatPair(key, record.Household[key]);
+        }
+    }
+
+    // 2. Members Section
+    html += '<h2>Adult Members (' + record.Members.length + ')</h2>';
+    record.Members.forEach((member, index) => {
+        html += `<div class="member-block"><h3 style="margin-top:0;">Member ${index + 1}: ${member.First_Name || ''} ${member.Last_Name || ''}</h3>`;
+        for (const key in member) {
+            if (key !== 'Household_ID' && key !== 'Member_ID' && key !== 'Timestamp') {
+                html += formatPair(key, member[key]);
+            }
+        }
+        html += '</div>';
+    });
+
+    // 3. Children Section
+    html += '<h2>Children Particulars (' + record.Children.length + ')</h2>';
+    record.Children.forEach((child, index) => {
+        html += `<div class="child-block"><h3 style="margin-top:0;">Child ${index + 1}: ${child.First_Name || ''} ${child.Last_Name || ''} (Age: ${child.Age || 'N/A'})</h3>`;
+        for (const key in child) {
+            if (key !== 'Household_ID' && key !== 'Child_ID' && key !== 'Timestamp') {
+                html += formatPair(key, child[key]);
+            }
+        }
+        html += '</div>';
+    });
+
+    detailContent.innerHTML = html;
+    detailPanel.style.display = 'block'; 
+    printBtn.style.display = 'block'; 
+    editBtn.style.display = 'block'; // 🌟 NEW: Show Edit Button 🌟
+}
